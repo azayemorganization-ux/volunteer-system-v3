@@ -176,7 +176,7 @@ export default function Home() {
     const SERVER_URL = "https://volunteer-system-v3.onrender.com"; 
     
     try {
-      const response = await fetch(`${SERVER_URL}/api/register`, {
+      const response = await fetch(`${SERVER_URL}/api/volunteers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
