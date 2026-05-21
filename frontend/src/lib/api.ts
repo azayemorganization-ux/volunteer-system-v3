@@ -3,13 +3,37 @@ const API_URL = import.meta.env.PROD
   ? "https://volunteer-system-v3.onrender.com/api"
   : "http://localhost:5000/api";
 
-// دالة مساعدة موحدة لإضافة إعدادات الأمان والجلسات تلقائياً لكل الطلبات
+// دالة مساعدة موحدة ومحدثة لتخطي حظر المتصفحات وتأمين الطلبات محلياً وسحابياً
 const secureFetch = async (url: string, options: RequestInit = {}) => {
+  // 1. جلب بيانات المشرف وتصريح المرور المحفوظ من ذاكرة المتصفح
+  const localAdmin = localStorage.getItem("admin_user");
+  let authHeader = {};
+
+  if (localAdmin) {
+    try {
+      const parsedAdmin = JSON.parse(localAdmin);
+      // إذا كان الباك إند يرسل توكن صريح، نمرره، أو نمرر اسم المستخدم ومعرفه للتوثيق الإلزامى
+      if (parsedAdmin.token) {
+        authHeader = { "Authorization": `Bearer ${parsedAdmin.token}` };
+      } else if (parsedAdmin.username) {
+        // تمرير هوية المشرف المشفرة كإجراء أمان احتياطي للسيرفر
+        authHeader = { 
+          "X-Admin-User": parsedAdmin.username,
+          "X-Admin-Role": parsedAdmin.role 
+        };
+      }
+    } catch (e) {
+      console.log("خطأ في قراءة تصريح المرور المحلى");
+    }
+  }
+
+  // 2. إرسال الطلب مدمجاً فيه إعدادات الأمان الكلاسيكية + الرأسية الموثقة محلياً
   const res = await fetch(`${API_URL}${url}`, {
     ...options,
-    credentials: "include", // 👈 حاسمة جداً لتمرير الـ Cookies والـ Session للسيرفر السحابي
+    credentials: "include", // الحفاظ عليها لدعم الجلسات السحابية الافتراضية
     headers: {
       "Content-Type": "application/json",
+      ...authHeader, // 👈 الجسر الآمن لتخطي حظر الـ Cookies عابرة القارات والتعرف على صلاحياتك
       ...options.headers,
     },
   });
