@@ -172,7 +172,8 @@ export default function Home() {
   };
 
   const onSubmit = async (data: FormValues) => {
-    const SERVER_URL = "https://your-server-name.onrender.com"; 
+    // الرابط الحقيقي الصحيح لسيرفر ريندر (بدون api/ لأنها مضافة تحت جاهزة)
+    const SERVER_URL = "https://volunteer-system-v3.onrender.com"; 
     
     try {
       const response = await fetch(`${SERVER_URL}/api/register`, {
