@@ -2,44 +2,42 @@ import express from "express";
 import cors from "cors";
 import { getIronSession } from "iron-session";
 import router from "./routes/index.js";
-import { db } from "./db/index.js"; // 👈 التعديل هنا: بنستورد مباشرة من مجلد db الشرعي اللي جهزناه
+import { db } from "./db/index.js";
 
 const app = express();
 
-// مهم جداً لمنصات الرفع السحابية (مثل Render) لقراءة الـ IPs وتأمين الجلسات بشكل صحيح
+// ضروري جداً لـ Render و Vercel (خلف Proxy)
 app.set("trust proxy", 1);
 
-// Body parser لقراءة البيانات القادمة من الـ Frontend (استمارات الحصر)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// إعدادات الـ CORS لتسمح للـ Frontend بالاتصال بالسيرفر وتبادل الـ Cookies للجلسات
-const allowedOrigin = process.env.FRONTEND_URL || "http://localhost:5173";
+const allowedOrigin = process.env.FRONTEND_URL || "https://volunteer-system-v3.vercel.app";
+
 app.use(
   cors({
-    origin: allowedOrigin, 
+    origin: allowedOrigin,
     credentials: true,
   })
 );
 
-// تفعيل خيارات الأمان المسبقة لجميع المسارات (Preflight Requests)
 app.options("*", cors());
 
-// ميدل وير إدارة الجلسات (Sessions) لتذكر دخول المشرفين والأدمن
 app.use(async (req, res, next) => {
   const sessionSecret = process.env.SESSION_SECRET;
   
-  if (!sessionSecret) {
-    console.error("❌ خطأ حرج: SESSION_SECRET غير معرف في ملف الـ .env لتأمين جلسات المشرفين");
+  if (!sessionSecret || sessionSecret.length < 32) {
+    console.error("❌ خطأ: SESSION_SECRET يجب أن يكون 32 حرفاً على الأقل");
   }
 
   const sessionOptions = {
     cookieName: "srcs_volunteer_session",
     password: sessionSecret || "a_very_long_secure_password_32_characters_long",
-    ttl: 60 * 60 * 24 * 7, // الجلسة تستمر لمدة أسبوع واحد (7 أيام)
+    ttl: 60 * 60 * 24 * 7,
     cookieOptions: {
+      // إذا كنت في برودكشن، اجبرها تكون secure
       secure: process.env.NODE_ENV === "production", 
-      sameSite: "none" as const,
+      sameSite: "none",
       httpOnly: true,
       path: "/",
     },
@@ -54,38 +52,18 @@ app.use(async (req, res, next) => {
   }
 });
 
-// الروابط الأساسية للنظام للعمليات الميدانية (Routes)
 app.use("/api", router);
 
-/**
- * 🔍 نظام فحص كفاءة السيرفر المركزي والربط مع Neon
- */
 app.get("/api/health", async (_req, res) => {
-  let dbStatus = "CONNECTED";
-  
-  try {
-    // السيرفر بيتأكد إنو قادر يوصل للـ db ومجلد الـ index شغال بدون مشاكل
-    if (!db) {
-      dbStatus = "DISCONNECTED";
-    }
-  } catch (e) {
-    dbStatus = "ERROR";
-  }
-
   res.status(200).json({
     status: "UP",
     environment: process.env.NODE_ENV || "development",
-    services: {
-      backend: "UP",
-      database: dbStatus // حيرد بـ CONNECTED طالما السيرفر واصل لـ Neon
-    },
     timestamp: new Date().toISOString()
   });
 });
 
-// الرابط الجذري الافتراضي للاختبار السريع في المتصفح
 app.get("/", (_req, res) => {
-  res.send("SRCS Volunteer System API (Neon-backed) is running successfully... V2.0");
+  res.send("SRCS Volunteer System API is running successfully.");
 });
 
 export default app;
