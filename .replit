@@ -1,5 +1,14 @@
+modules = ["nodejs-20"]
 [agent]
 expertMode = true
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+DATABASE_URL = "postgresql://neondb_owner:npg_MIBK5wsjHW9N@ep-ancient-king-ap26iqer-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+[[ports]]
+localPort = 5173

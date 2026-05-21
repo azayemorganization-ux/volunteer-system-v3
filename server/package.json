@@ -1,0 +1,30 @@
+{
+  "name": "srcs-volunteer-server-v3",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch app.ts",
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "cloudinary": "^2.10.0",
+    "cors": "^2.8.6",
+    "drizzle-orm": "^0.45.2",
+    "drizzle-zod": "^0.8.3",
+    "express": "^4.22.2",
+    "iron-session": "^8.0.4",
+    "pg": "^8.21.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
+    "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.22.3",
+    "typescript": "^5.9.3"
+  }
+}
