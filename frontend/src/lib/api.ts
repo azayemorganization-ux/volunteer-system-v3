@@ -1,6 +1,6 @@
 // تحديد رابط الباك إند ديناميكياً: يتوافق مع بيئة Vite الذكية في التطوير والإنتاج
 const API_URL = import.meta.env.PROD
-  ? "https://your-backend-url.onrender.com/api" // 👈 استبدله برابط سيرفر Render الفعلي لاحقاً
+  ? "https://volunteer-system-v3.onrender.com/api"
   : "http://localhost:5000/api";
 
 // دالة مساعدة موحدة لإضافة إعدادات الأمان والجلسات تلقائياً لكل الطلبات
