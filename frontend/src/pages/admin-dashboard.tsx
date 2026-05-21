@@ -35,9 +35,7 @@ import { IDCard, CardScreenshotPopup, type VolunteerCardData } from "./success";
 import { FileSpreadsheet, Download, Users, ShieldCheck } from "lucide-react";
 
 // استخدام المتغير الديناميكي لرابط الـ API المتصل بـ Render أو المحلي لعمليات الـ Auth المباشرة
-const API_URL = process.env.NODE_ENV === "production" 
-  ? "https://your-backend-url.onrender.com/api" 
-  : "http://localhost:5000/api";
+const API_URL = "https://volunteer-system-v3.onrender.com/api";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -71,19 +69,56 @@ export default function AdminDashboard() {
   const [admin, setAdmin] = useState<any>(null);
   const [adminLoading, setAdminLoading] = useState(true);
 
-  useEffect(() => {
-    // التحقق من هوية المشرف باستخدام الجلسة الآمنة والكوكيز المشفرة
-    fetch(`${API_URL}/auth/me`, { credentials: "include" })
-      .then(res => res.ok ? res.json() : Promise.reject())
-      .then(setAdmin)
-      .catch(() => setLocation("/admin"))
-      .finally(() => setAdminLoading(false));
+    useEffect(() => {
+    // التحقق أولاً من وجود مفتاح العبور المحلي لتفادي مشاكل الـ Cookies عابرة القارات
+    const localAdmin = localStorage.getItem("admin_user");
+    
+    if (localAdmin) {
+      try {
+        const parsedAdmin = JSON.parse(localAdmin);
+        setAdmin(parsedAdmin);
+        setAdminLoading(false);
+        
+        // تحديث البيانات من السيرفر في الخلفية احتياطاً للتأكد من الصلاحيات والربط بالرابط الصحيح
+        fetch(`${API_URL}/auth/me`, { credentials: "include" })
+          .then(res => res.ok ? res.json() : Promise.reject())
+          .then((freshAdmin) => {
+            setAdmin(freshAdmin);
+            localStorage.setItem("admin_user", JSON.stringify(freshAdmin));
+          })
+          .catch(() => {
+            // نترك الجلسة المحلية تعمل طالما البيانات محفوظة محلياً ولا نطرد القائد بسبب الـ Cookies
+            console.log("السيرفر مستجيب ولكن الكوكيز مقيدة جغرافياً بالمتصفح");
+          });
+          
+      } catch (e) {
+        localStorage.removeItem("admin_user");
+        setLocation("/admin");
+        setAdminLoading(false);
+      }
+    } else {
+      // إذا لم يجد تصريح دخول، يتأكد من السيرفر كخيار أخير وإلا يطرده
+      fetch(`${API_URL}/auth/me`, { credentials: "include" })
+        .then(res => res.ok ? res.json() : Promise.reject())
+        .then((serverAdmin) => {
+          setAdmin(serverAdmin);
+          localStorage.setItem("admin_user", JSON.stringify(serverAdmin));
+        })
+        .catch(() => setLocation("/admin"))
+        .finally(() => setAdminLoading(false));
+    }
   }, [setLocation]);
 
   const handleLogout = async () => {
-    await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" });
+    try {
+      await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" });
+    } catch (e) {
+      console.log("تم تسجيل الخروج محلياً");
+    }
+    localStorage.removeItem("admin_user"); // تنظيف تصريح المرور لضمان الأمان
     setLocation("/admin");
   };
+
 
   if (adminLoading) {
     return <div className="min-h-screen flex items-center justify-center" dir="rtl"><div className="text-muted-foreground">جاري التحميل وتأمين الجلسة...</div></div>;

@@ -56,14 +56,22 @@ export default function AdminLogin() {
       }
 
       if (response.ok) {
+        // حفظ بيانات المشرف ورتبته وصلاحياته القادمة من السيرفر في ذاكرة المتصفح
+        if (result && result.user) {
+          localStorage.setItem("admin_user", JSON.stringify(result.user));
+        } else if (result) {
+          // احتياطاً إذا كان السيرفر يرسل الكائن مباشرة بدون تغليفه في user
+          localStorage.setItem("admin_user", JSON.stringify(result));
+        }
+
         toast({
           title: "تم تسجيل الدخول بنجاح",
           description: `مرحباً بك مجدداً يا قائد!`,
         });
-        
-        // التوجيه مباشرة للوحة التحكم - الـ Cookie حتحمي المسارات تلقائياً
+
         setLocation("/admin/dashboard");
-      } else {
+      }
+ else {
         throw new Error(result.error || "اسم المستخدم أو كلمة المرور غير صحيحة");
       }
     } catch (err: any) {
