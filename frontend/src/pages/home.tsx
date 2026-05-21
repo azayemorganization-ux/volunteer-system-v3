@@ -24,12 +24,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState, useRef } from "react";
 
-// مصفوفة الوحدات المعتمدة لمحلية جبل أولياء
-const units = [
-  { id: 1, name: "وحدة جبل أولياء المركزية", sector: "القطاع الشمالي" },
-  { id: 2, name: "وحدة الكلاكلة", sector: "القطاع الأوسط" },
-  { id: 3, name: "وحدة النصر", sector: "القطاع الشرقي" },
-];
+// تعريف نوع البيانات الخاصة بالوحدات لضمان سلامة الكود
+interface UnitType {
+  id: number;
+  name: string;
+  sector: string;
+}
 
 const OTHER_PROGRAMS = ["لا", "التمريض المنزلي", "الرعاية الصحية"] as const;
 
@@ -71,6 +71,10 @@ export default function Home() {
   const { toast } = useToast();
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, ended: false });
   
+  // المخزن الديناميكي للوحدات القادمة من قاعدة البيانات
+  const [dbUnits, setDbUnits] = useState<UnitType[]>([]);
+  const [isLoadingUnits, setIsLoadingUnits] = useState(true);
+
   // معاينات الملفات المرفوعة
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [totCertPreview, setTotCertPreview] = useState<string | null>(null);
@@ -79,6 +83,32 @@ export default function Home() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const totCertInputRef = useRef<HTMLInputElement>(null);
   const otherCertInputRef = useRef<HTMLInputElement>(null);
+
+  // رابط سيرفر ريندر المعتمد
+  const SERVER_URL = "https://volunteer-system-v3.onrender.com";
+
+  // جلب الوحدات ديناميكياً من السيرفر عند تحميل الصفحة
+  useEffect(() => {
+    const fetchLiveUnits = async () => {
+      try {
+        const response = await fetch(`${SERVER_URL}/api/units`);
+        if (!response.ok) throw new Error("فشل جلب الوحدات من السيرفر");
+        const data = await response.json();
+        setDbUnits(data);
+      } catch (error) {
+        console.error("Error fetching units:", error);
+        toast({
+          variant: "destructive",
+          title: "خطأ في جلب الوحدات",
+          description: "فشل السيرفر في تحميل الوحدات، تأكد من اتصال قاعدة البيانات.",
+        });
+      } finally {
+        setIsLoadingUnits(false);
+      }
+    };
+
+    fetchLiveUnits();
+  }, [toast]);
 
   useEffect(() => {
     const targetDate = new Date("2026-05-30T23:59:59").getTime();
@@ -172,16 +202,13 @@ export default function Home() {
   };
 
   const onSubmit = async (data: FormValues) => {
-    // الرابط الحقيقي الصحيح لسيرفر ريندر (بدون api/ لأنها مضافة تحت جاهزة)
-    const SERVER_URL = "https://volunteer-system-v3.onrender.com"; 
-    
     try {
       const response = await fetch(`${SERVER_URL}/api/volunteers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
-          isTotTrainer: data.isTotTrainer === "true", // تحويل بوليان متوافق مع قاعدة البيانات
+          isTotTrainer: data.isTotTrainer === "true", 
         }),
       });
 
@@ -390,19 +417,23 @@ export default function Home() {
                 )} />
               </section>
 
-              {/* الوحدة التطوعية */}
+              {/* الوحدة التطوعية الديناميكية */}
               <section className="space-y-4">
                 <div className="border-b pb-2"><h3 className="text-xl font-bold text-primary">الوحدة التطوعية المحلية</h3></div>
                 <FormField control={form.control} name="unitId" render={({ field }) => (
                   <FormItem><FormLabel>تتبع لأي وحدة بمحلية جبل أولياء؟ <span className="text-destructive">*</span></FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value ? field.value.toString() : ""}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="اختر الوحدة الميدانية التي تنتمي إليها" /></SelectTrigger></FormControl>
+                      <FormControl><SelectTrigger><SelectValue placeholder={isLoadingUnits ? "جاري تحميل الوحدات الحية..." : "اختر الوحدة الميدانية التي تنتمي إليها"} /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {units.map((u) => (
-                          <SelectItem key={u.id} value={u.id.toString()}>
-                            {u.name} {u.sector ? `(${u.sector})` : ""}
-                          </SelectItem>
-                        ))}
+                        {dbUnits.length > 0 ? (
+                          dbUnits.map((u) => (
+                            <SelectItem key={u.id} value={u.id.toString()}>
+                              {u.name} {u.sector ? `(${u.sector})` : ""}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="0" disabled>لا توجد وحدات متوفرة حالياً</SelectItem>
+                        )}
                       </SelectContent>
                     </Select><FormMessage />
                   </FormItem>
