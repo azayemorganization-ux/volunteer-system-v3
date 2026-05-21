@@ -15,10 +15,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
-// استخدام المتغير الديناميكي لرابط الـ API المتصل بـ Render أو المحلي
-const API_URL = process.env.NODE_ENV === "production" 
-  ? "https://your-backend-url.onrender.com/api" 
-  : "http://localhost:5000/api";
+// الرابط المباشر الصحيح لسيرفر ريندر المركزي
+const API_URL = "https://volunteer-system-v3.onrender.com/api";
 
 const loginSchema = z.object({
   username: z.string().min(1, "يجب إدخال اسم المستخدم"),
@@ -45,11 +43,17 @@ export default function AdminLogin() {
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // 👈 حاسمة جداً عشان المتصفح يستقبل الـ Cookie الخاصة بالـ Session ويحفظها
+        credentials: "include", // حاسمة جداً عشان المتصفح يستقبل الـ Cookie الخاصة بالـ Session ويحفظها
         body: JSON.stringify(data),
       });
 
-      const result = await response.json();
+      // فحص أمان: للتأكد من أن السيرفر رد بـ JSON وليس خطأ سحابي معلق
+      let result: any = {};
+      try {
+        result = await response.json();
+      } catch (e) {
+        result = { error: "السيرفر لم يرسل استجابة صالحة (قد يكون قيد التشغيل، أعد المحاولة بعد ثوانٍ)" };
+      }
 
       if (response.ok) {
         toast({
