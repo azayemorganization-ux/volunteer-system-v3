@@ -1,5 +1,4 @@
 import { pgTable, text, serial, timestamp, boolean, integer } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 /* ---------------------- جدول الوحدات ---------------------- */
@@ -10,14 +9,6 @@ export const unitsTable = pgTable("units", {
   sector: text("sector"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
-
-export const insertUnitSchema = createInsertSchema(unitsTable, {
-  id: z.number().optional(),
-  createdAt: z.date().optional(),
-});
-
-export type InsertUnit = z.infer<typeof insertUnitSchema>;
-export type Unit = typeof unitsTable.$inferSelect;
 
 /* ---------------------- جدول المشرفين ---------------------- */
 
@@ -62,15 +53,44 @@ export const volunteersTable = pgTable("volunteers", {
 
 /* ---------------------- Zod Schemas ---------------------- */
 
-export const insertVolunteerSchema = createInsertSchema(volunteersTable, {
+// مخطط إدخل الوحدات الصافي
+export const insertUnitSchema = z.object({
   id: z.number().optional(),
-  createdAt: z.date().optional(),
-  approvedAt: z.date().optional().nullable(),
+  name: z.string().min(1, "اسم الوحدة مطلوب"),
+  sector: z.string().optional().nullable(),
+  createdAt: z.any().optional(),
+});
+
+// مخطط إدخال المتطوعين الصافي
+export const insertVolunteerSchema = z.object({
+  id: z.number().optional(),
+  volunteerId: z.string().optional(),
+  fullName: z.string().min(1, "الاسم الكامل مطلوب"),
+  nationalId: z.string().min(1, "الرقم الوطني مطلوب"),
+  phone: z.string().min(1, "رقم الهاتف مطلوب"),
   whatsapp: z.string().optional().nullable(),
+  yearOfVolunteering: z.string().min(1, "سنة بدء التطوع مطلوبة"),
+  unitId: z.coerce.number({ required_error: "يرجى اختيار الوحدة التابع لها" }),
   photoUrl: z.string().optional().nullable(),
+  isTotTrainer: z.boolean().default(false),
+  totYear: z.string().optional().nullable(),
   totCertificateUrl: z.string().optional().nullable(),
   otherCertificateUrl: z.string().optional().nullable(),
+  lastFirstAidRefresher: z.string().optional().nullable(),
+  otherPrograms: z.string().optional().nullable(),
+  currentStatusInKhartoum: z.string().min(1, "الوضع الحالي في الخرطوم مطلوب"),
+  expectedReturnTime: z.string().optional().nullable(),
+  availabilityLevel: z.string().min(1, "مستوى الجاهزية مطلوب"),
+  agreedToTerms: z.boolean().default(false),
+  status: z.string().optional().default("pending"),
+  approvedAt: z.any().optional().nullable(),
+  approvedBy: z.string().optional().nullable(),
+  rejectionReason: z.string().optional().nullable(),
+  createdAt: z.any().optional(),
 });
+
+export type InsertUnit = z.infer<typeof insertUnitSchema>;
+export type Unit = typeof unitsTable.$inferSelect;
 
 export type InsertVolunteer = z.infer<typeof insertVolunteerSchema>;
 export type Volunteer = typeof volunteersTable.$inferSelect;
