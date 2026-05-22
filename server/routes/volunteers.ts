@@ -13,7 +13,7 @@ function getAdminUnitCondition(req) {
   const role = admin.role;
   const assignedUnitsRaw = admin.assignedUnits;
 
-  // المشرف الرئيسي (أنت) يشوف كل شيء
+  // المشرف الرئيسي يشوف كل شيء
   if (role === "superadmin") return null;
 
   // مشرف قطاع عنده وحدات مخصصة (مثلاً 4 وحدات)
@@ -66,7 +66,7 @@ router.get("/public/:id", async (req, res) => {
 
     // البحث بـ الـ volunteerId النصي أو الـ id الرقمي
     const isNumber = !isNaN(Number(decodedId));
-
+    
     const results = await db
       .select({
         volunteer: volunteersTable,
@@ -301,6 +301,11 @@ router.patch("/:id/approve", async (req, res) => {
     // تأمين جلب اسم الأدمن من الجلسة لتجنب أي Crash
     const adminName = req.session.admin?.username || "مشرف نظام";
 
+    // صياغة الشرط بطريقة ذكية تمنع تمرير undefined للمكتبة
+    const whereCondition = isNumber
+      ? or(eq(volunteersTable.volunteerId, decodedId), eq(volunteersTable.id, Number(decodedId)))
+      : eq(volunteersTable.volunteerId, decodedId);
+
     const [updated] = await db
       .update(volunteersTable)
       .set({
@@ -308,12 +313,7 @@ router.patch("/:id/approve", async (req, res) => {
         approvedAt: new Date(),
         approvedBy: adminName,
       })
-      .where(
-        or(
-          eq(volunteersTable.volunteerId, decodedId),
-          isNumber ? eq(volunteersTable.id, Number(decodedId)) : undefined
-        )
-      )
+      .where(whereCondition)
       .returning();
 
     if (!updated) {
@@ -336,8 +336,12 @@ router.patch("/:id/reject", async (req, res) => {
     const { reason } = req.body;
     const decodedId = decodeURIComponent(id).trim();
     const isNumber = !isNaN(Number(decodedId));
-
+    
     const adminName = req.session.admin?.username || "مشرف نظام";
+
+    const whereCondition = isNumber
+      ? or(eq(volunteersTable.volunteerId, decodedId), eq(volunteersTable.id, Number(decodedId)))
+      : eq(volunteersTable.volunteerId, decodedId);
 
     const [updated] = await db
       .update(volunteersTable)
@@ -346,12 +350,7 @@ router.patch("/:id/reject", async (req, res) => {
         rejectionReason: reason ? String(reason).trim() : "لم يذكر سبب",
         approvedBy: adminName,
       })
-      .where(
-        or(
-          eq(volunteersTable.volunteerId, decodedId),
-          isNumber ? eq(volunteersTable.id, Number(decodedId)) : undefined
-        )
-      )
+      .where(whereCondition)
       .returning();
 
     if (!updated) {
@@ -374,14 +373,13 @@ router.delete("/:id", async (req, res) => {
     const decodedId = decodeURIComponent(id).trim();
     const isNumber = !isNaN(Number(decodedId));
 
+    const whereCondition = isNumber
+      ? or(eq(volunteersTable.volunteerId, decodedId), eq(volunteersTable.id, Number(decodedId)))
+      : eq(volunteersTable.volunteerId, decodedId);
+
     const [deleted] = await db
       .delete(volunteersTable)
-      .where(
-        or(
-          eq(volunteersTable.volunteerId, decodedId),
-          isNumber ? eq(volunteersTable.id, Number(decodedId)) : undefined
-        )
-      )
+      .where(whereCondition)
       .returning();
 
     if (!deleted) {
@@ -397,4 +395,3 @@ router.delete("/:id", async (req, res) => {
 });
 
 export default router;
-
