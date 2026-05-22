@@ -66,7 +66,7 @@ router.get("/public/:id", async (req, res) => {
 
     // البحث بـ الـ volunteerId النصي أو الـ id الرقمي
     const isNumber = !isNaN(Number(decodedId));
-    
+
     const results = await db
       .select({
         volunteer: volunteersTable,
@@ -165,7 +165,7 @@ router.get("/stats", async (req, res) => {
     let rejected = allVolunteers.filter(v => v.status === "rejected").length;
 
     // حساب إحصائيات الوحدات المعتمدة
-    const unitCounts: Record<string, number> = {};
+    const unitCounts = {};
     allVolunteers.filter(v => v.status === "approved").forEach(v => {
       const name = v.unitName || "غير محدد";
       unitCounts[name] = (unitCounts[name] || 0) + 1;
@@ -288,25 +288,42 @@ router.post("/", async (req, res) => {
 });
 
 // ========================================================
-// 9. عمليات المراجعة: الاعتماد (Approve) والرفض (Reject) والحذف
+// 9. عمليات المراجعة المحصنة: الاعتماد (Approve) والرفض (Reject) والحذف
 // ========================================================
 router.patch("/:id/approve", async (req, res) => {
   if (!requireAdmin(req, res)) return;
 
   try {
+    const { id } = req.params;
+    const decodedId = decodeURIComponent(id).trim();
+    const isNumber = !isNaN(Number(decodedId));
+
+    // تأمين جلب اسم الأدمن من الجلسة لتجنب أي Crash
+    const adminName = req.session.admin?.username || "مشرف نظام";
+
     const [updated] = await db
       .update(volunteersTable)
       .set({
         status: "approved",
         approvedAt: new Date(),
-        approvedBy: req.session.admin.username,
+        approvedBy: adminName,
       })
-      .where(eq(volunteersTable.id, Number(req.params.id)))
+      .where(
+        or(
+          eq(volunteersTable.volunteerId, decodedId),
+          isNumber ? eq(volunteersTable.id, Number(decodedId)) : undefined
+        )
+      )
       .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "عفواً، لم يتم العثور على المتطوع لتحديث حالته" });
+      return;
+    }
 
     res.json(updated);
   } catch (err) {
-    console.error(err);
+    console.error("Approve API Error Log:", err);
     res.status(500).json({ error: "فشل اعتماد طلب المتطوع" });
   }
 });
@@ -315,21 +332,36 @@ router.patch("/:id/reject", async (req, res) => {
   if (!requireAdmin(req, res)) return;
 
   try {
+    const { id } = req.params;
     const { reason } = req.body;
+    const decodedId = decodeURIComponent(id).trim();
+    const isNumber = !isNaN(Number(decodedId));
+
+    const adminName = req.session.admin?.username || "مشرف نظام";
 
     const [updated] = await db
       .update(volunteersTable)
       .set({
         status: "rejected",
         rejectionReason: reason ? String(reason).trim() : "لم يذكر سبب",
-        approvedBy: req.session.admin.username,
+        approvedBy: adminName,
       })
-      .where(eq(volunteersTable.id, Number(req.params.id)))
+      .where(
+        or(
+          eq(volunteersTable.volunteerId, decodedId),
+          isNumber ? eq(volunteersTable.id, Number(decodedId)) : undefined
+        )
+      )
       .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "عفواً، لم يتم العثور على سجل المتطوع" });
+      return;
+    }
 
     res.json(updated);
   } catch (err) {
-    console.error(err);
+    console.error("Reject API Error Log:", err);
     res.status(500).json({ error: "فشل رفض طلب المتطوع" });
   }
 });
@@ -338,15 +370,31 @@ router.delete("/:id", async (req, res) => {
   if (!requireSuperAdmin(req, res)) return;
 
   try {
-    await db
+    const { id } = req.params;
+    const decodedId = decodeURIComponent(id).trim();
+    const isNumber = !isNaN(Number(decodedId));
+
+    const [deleted] = await db
       .delete(volunteersTable)
-      .where(eq(volunteersTable.id, Number(req.params.id)));
+      .where(
+        or(
+          eq(volunteersTable.volunteerId, decodedId),
+          isNumber ? eq(volunteersTable.id, Number(decodedId)) : undefined
+        )
+      )
+      .returning();
+
+    if (!deleted) {
+      res.status(404).json({ error: "عفواً، السجل غير موجود أو تم حذفه مسبقاً" });
+      return;
+    }
 
     res.sendStatus(204);
   } catch (err) {
-    console.error(err);
+    console.error("Delete API Error Log:", err);
     res.status(500).json({ error: "فشل حذف سجل المتطوع" });
   }
 });
 
 export default router;
+
