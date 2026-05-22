@@ -66,7 +66,7 @@ router.get("/public/:id", async (req, res) => {
 
     // البحث بـ الـ volunteerId النصي أو الـ id الرقمي
     const isNumber = !isNaN(Number(decodedId));
-    
+
     const results = await db
       .select({
         volunteer: volunteersTable,
@@ -226,7 +226,6 @@ router.get("/check-status", async (req, res) => {
 // 8. تسجيل استمارة متطوع جديد بالكامل (Public)
 // ========================================================
 router.post("/", async (req, res) => {
-  // فحص البيانات عبر Zod للتأكد من سلامتها قبل الدخول للداتابيز
   const parsed = insertVolunteerSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "الرجاء مراجعة البيانات المدخلة وإكمال الحقول المطلوبة" });
@@ -236,7 +235,6 @@ router.post("/", async (req, res) => {
   try {
     const d = parsed.data;
 
-    // التحقق من عدم التكرار (بالاسم الكامل أو الرقم الوطني الفريد)
     const existing = await db
       .select()
       .from(volunteersTable)
@@ -253,7 +251,6 @@ router.post("/", async (req, res) => {
       return;
     }
 
-    // الروابط الافتراضية للملفات (Cloudinary سنقوم بدمجه لاحقاً كخطوتنا القادمة المتفق عليها)
     let finalPhotoUrl = d.photoUrl || null;
     let finalTotCertUrl = d.totCertificateUrl || null;
     let finalOtherCertUrl = d.otherCertificateUrl || null;
@@ -290,10 +287,9 @@ router.post("/", async (req, res) => {
 // ========================================================
 // 9. عمليات المراجعة المحصنة: الاعتماد (Approve) والرفض (Reject) والحذف
 // ========================================================
-router.patch("/:id/approve", async (req, res) => {
-  // 👇 1. سطر الكشف الأول: هل استقبل السيرفر النقرة أصلاً؟
+// 🛠️ تم تعديلها هنا إلى POST لتطابق طلب الفرونت إند تماماً
+router.post("/:id/approve", async (req, res) => {
   console.log("📢 [HIT] تم استقبال طلب اعتماد للمتطوع ID الحالي:", req.params.id);
-  // 👇 2. سطر الكشف الثاني: هل الكوكي حقت السيشن واصلة ولا حجبها المتصفح؟
   console.log("👤 [SESSION COOKIE CHECK] بيانات الأدمن في السيشن حالياً:", req.session?.admin);
 
   if (!requireAdmin(req, res)) {
@@ -341,7 +337,8 @@ router.patch("/:id/approve", async (req, res) => {
   }
 });
 
-router.patch("/:id/reject", async (req, res) => {
+// 🛠️ تم تعديلها هنا أيضاً إلى POST احتياطاً لمنع نفس الخلل عند الرفض
+router.post("/:id/reject", async (req, res) => {
   if (!requireAdmin(req, res)) return;
 
   try {
@@ -349,7 +346,7 @@ router.patch("/:id/reject", async (req, res) => {
     const { reason } = req.body;
     const decodedId = decodeURIComponent(id).trim();
     const isNumber = !isNaN(Number(decodedId));
-    
+
     const adminName = req.session.admin?.username || "مشرف نظام";
 
     const whereCondition = isNumber
