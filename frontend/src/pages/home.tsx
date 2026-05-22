@@ -75,7 +75,16 @@ export default function Home() {
   const [dbUnits, setDbUnits] = useState<UnitType[]>([]);
   const [isLoadingUnits, setIsLoadingUnits] = useState(true);
 
-  // معاينات الملفات المرفوعة
+  // إعدادات كلاودنري السحرية
+  const CLOUDINARY_CLOUD_NAME = "ddznegswc";
+  const CLOUDINARY_UPLOAD_PRESET = "kaee3l5k"; // <--- ضع اسم الـ Preset حقك هنا يا هندسة
+
+  // حالات تحميل المرفقات السحابية (تمنع الحفظ النهائي أثناء الرفع)
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isUploadingTot, setIsUploadingTot] = useState(false);
+  const [isUploadingOther, setIsUploadingOther] = useState(false);
+
+  // معاينات الملفات المرفوعة محلياً للشاشة
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [totCertPreview, setTotCertPreview] = useState<string | null>(null);
   const [otherCertPreview, setOtherCertPreview] = useState<string | null>(null);
@@ -86,6 +95,25 @@ export default function Home() {
 
   // رابط سيرفر ريندر المعتمد
   const SERVER_URL = "https://volunteer-system-v3.onrender.com";
+
+  // دالة الرفع المباشرة والآمنة إلى سيرفر Cloudinary
+  const uploadToCloudinary = async (fileOrBase64: File | string): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", fileOrBase64);
+    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("فشل رفع الملف إلى السيرفر السحابي");
+    }
+
+    const data = await response.json();
+    return data.secure_url; // الرابط النصي الصغير للـ URL المباشر
+  };
 
   // جلب الوحدات ديناميكياً من السيرفر عند تحميل الصفحة
   useEffect(() => {
@@ -148,7 +176,7 @@ export default function Home() {
   const otherPrograms = form.watch("otherPrograms");
   const currentStatusInKhartoum = form.watch("currentStatusInKhartoum");
 
-  // معالجة وضغط الصورة الشخصية
+  // معالجة وضغط الصورة الشخصية ورفعها سحابياً
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -156,49 +184,84 @@ export default function Home() {
       toast({ variant: "destructive", title: "الصورة كبيرة جداً", description: "يجب أن يكون حجم الصورة أقل من 3 ميغابايت" });
       return;
     }
+    
+    setIsUploadingPhoto(true);
     const reader = new FileReader();
     reader.onloadend = () => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const maxDim = 600;
         const scale = Math.min(maxDim / img.width, maxDim / img.height, 1);
         const canvas = document.createElement("canvas");
         canvas.width = img.width * scale;
         canvas.height = img.height * scale;
         canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const compressed = canvas.toDataURL("image/jpeg", 0.82);
-        setPhotoPreview(compressed);
-        form.setValue("photoUrl", compressed, { shouldValidate: true });
+        const compressedBase64 = canvas.toDataURL("image/jpeg", 0.82);
+        
+        setPhotoPreview(compressedBase64); // عرض المعاينة فوراً للمستخدم بالـ base64 المخفف
+
+        try {
+          const cloudinaryUrl = await uploadToCloudinary(compressedBase64);
+          form.setValue("photoUrl", cloudinaryUrl, { shouldValidate: true });
+        } catch (error) {
+          toast({ variant: "destructive", title: "خطأ سحابي", description: "فشل رفع الصورة الشخصية لـ Cloudinary" });
+          setPhotoPreview(null);
+        } finally {
+          setIsUploadingPhoto(false);
+        }
       };
       img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
   };
 
-  // معالجة رفع شهادة TOT
-  const handleTotCertUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // معالجة ورفع شهادة TOT سحابياً
+  const handleTotCertUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    setIsUploadingTot(true);
+    
+    // لعمل المعاينة السريعة للشاشة
     const reader = new FileReader();
     reader.onloadend = () => {
-      const result = reader.result as string;
-      setTotCertPreview(result);
-      form.setValue("totCertificateUrl", result, { shouldValidate: true });
+      setTotCertPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
+
+    try {
+      const cloudinaryUrl = await uploadToCloudinary(file);
+      form.setValue("totCertificateUrl", cloudinaryUrl, { shouldValidate: true });
+    } catch (error) {
+      toast({ variant: "destructive", title: "خطأ في الرفع", description: "لم يتم حفظ شهادة الـ TOT سحابياً، أعد المحاولة." });
+      setTotCertPreview(null);
+    } finally {
+      setIsUploadingTot(false);
+    }
   };
 
-  // معالجة رفع الشهادات الإضافية الأخرى
-  const handleOtherCertUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // معالجة ورفع الشهادات الإضافية الأخرى سحابياً
+  const handleOtherCertUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    setIsUploadingOther(true);
+    
     const reader = new FileReader();
     reader.onloadend = () => {
-      const result = reader.result as string;
-      setOtherCertPreview(result);
-      form.setValue("otherCertificateUrl", result, { shouldValidate: true });
+      setOtherCertPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
+
+    try {
+      const cloudinaryUrl = await uploadToCloudinary(file);
+      form.setValue("otherCertificateUrl", cloudinaryUrl, { shouldValidate: true });
+    } catch (error) {
+      toast({ variant: "destructive", title: "خطأ في الرفع", description: "لم يتم حفظ الشهادة التخصصية سحابياً" });
+      setOtherCertPreview(null);
+    } finally {
+      setIsUploadingOther(false);
+    }
   };
 
   const onSubmit = async (data: FormValues) => {
@@ -386,8 +449,10 @@ export default function Home() {
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">إرفاق صورة شخصية حديثة <span className="text-[11px] font-normal text-muted-foreground">(اختياري)</span></FormLabel>
                     <div className="flex items-start gap-5">
-                      <div className="w-24 h-24 rounded-full border-2 border-dashed border-primary/40 bg-muted flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-primary/70 transition-colors" onClick={() => photoInputRef.current?.click()}>
-                        {photoPreview ? (
+                      <div className="w-24 h-24 rounded-full border-2 border-dashed border-primary/40 bg-muted flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-primary/70 transition-colors" onClick={() => !isUploadingPhoto && photoInputRef.current?.click()}>
+                        {isUploadingPhoto ? (
+                          <div className="text-center p-1 text-xs text-amber-600 font-bold animate-pulse">جاري الرفع سحابياً...</div>
+                        ) : photoPreview ? (
                           <img src={photoPreview} alt="الصورة الشخصية" className="w-full h-full object-cover" />
                         ) : (
                           <div className="text-center text-muted-foreground">
@@ -397,17 +462,17 @@ export default function Home() {
                       </div>
                       <div className="flex-1 space-y-3">
                         <FormControl>
-                          <input {...field} ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} value="" />
+                          <input {...field} ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} value="" disabled={isUploadingPhoto} />
                         </FormControl>
-                        <Button type="button" variant="outline" size="sm" onClick={() => photoInputRef.current?.click()}>
-                          {photoPreview ? "تغيير الصورة" : "رفع الصورة الشخصية"}
+                        <Button type="button" variant="outline" size="sm" onClick={() => photoInputRef.current?.click()} disabled={isUploadingPhoto}>
+                          {isUploadingPhoto ? "جاري الحفظ..." : photoPreview ? "تغيير الصورة" : "رفع الصورة الشخصية"}
                         </Button>
                         <div className="space-y-2">
                           <p className="text-[11px] leading-relaxed text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                            <strong>إرشادات:</strong> اختيارية وتظهر في بطاقتك الرقمية. للحصول على أفضل جودة، يفضل استخدام خلفية سادة وإضاءة واضحة.
+                            <strong>إرشادات:</strong> اختيارية وتظهر في بطاقتك الرقمية. يتم حفظها آمنة سحابياً دون التأثير على ذاكرة النظام المحدودة.
                           </p>
                         </div>
-                        {photoPreview && (
+                        {photoPreview && !isUploadingPhoto && (
                           <button type="button" className="text-xs text-destructive hover:underline block" onClick={() => { setPhotoPreview(null); form.setValue("photoUrl", ""); }}>حذف الصورة</button>
                         )}
                       </div>
@@ -460,12 +525,18 @@ export default function Home() {
                     <FormField control={form.control} name="totCertificateUrl" render={({ field: { value: _v, ...field } }) => (
                       <FormItem className="col-span-1 md:col-span-2 border-dashed border border-muted/70 p-4 rounded bg-white/50">
                         <FormLabel className="text-muted-foreground">إرفاق شهادة مدرب إسعافات أولية (TOT)</FormLabel>
-                        <FormControl><input type="file" ref={totCertInputRef} className="hidden" accept="image/*,.pdf" onChange={handleTotCertUpload} /></FormControl>
+                        <FormControl><input type="file" ref={totCertInputRef} className="hidden" accept="image/*,.pdf" onChange={handleTotCertUpload} disabled={isUploadingTot} /></FormControl>
                         <div className="flex items-center gap-3 mt-2">
-                          <Button type="button" variant="outline" size="sm" onClick={() => totCertInputRef.current?.click()}>رفع الشهادة</Button>
-                          {totCertPreview && <span className="text-xs text-green-700 font-bold">✅ تم الرفع والتجهيز</span>}
+                          <Button type="button" variant="outline" size="sm" onClick={() => totCertInputRef.current?.click()} disabled={isUploadingTot}>
+                            {isUploadingTot ? "جاري الرفع..." : "رفع الشهادة"}
+                          </Button>
+                          {isUploadingTot ? (
+                            <span className="text-xs text-amber-600 font-bold animate-pulse">⏳ جاري الحفظ سحابياً...</span>
+                          ) : totCertPreview ? (
+                            <span className="text-xs text-green-700 font-bold">✅ تم الرفع والتجهيز</span>
+                          ) : null}
                         </div>
-                        {totCertPreview && (
+                        {totCertPreview && !isUploadingTot && (
                           <button type="button" className="text-xs text-destructive hover:underline mt-1 block" onClick={() => { setTotCertPreview(null); form.setValue("totCertificateUrl", ""); }}>حذف المرفق</button>
                         )}
                       </FormItem>
@@ -499,14 +570,20 @@ export default function Home() {
                             <FormLabel className="text-red-700 font-bold flex items-center gap-2 text-base">رفع شهادة تخصص للبرنامج ({otherPrograms}) <span className="text-destructive">*</span></FormLabel>
                             <FormControl>
                               <div className="space-y-2">
-                                <input type="file" ref={otherCertInputRef} className="hidden" accept="image/*,.pdf" onChange={handleOtherCertUpload} />
+                                <input type="file" ref={otherCertInputRef} className="hidden" accept="image/*,.pdf" onChange={handleOtherCertUpload} disabled={isUploadingOther} />
                                 <div className="flex items-center gap-3 mt-2">
-                                  <Button type="button" variant="destructive" size="sm" onClick={() => otherCertInputRef.current?.click()} className="bg-red-600">اختيار الملف</Button>
-                                  {otherCertPreview && <span className="text-xs text-green-700 font-bold">✅ تم الرفع بنجاح</span>}
+                                  <Button type="button" variant="destructive" size="sm" onClick={() => otherCertInputRef.current?.click()} className="bg-red-600" disabled={isUploadingOther}>
+                                    {isUploadingOther ? "جاري الرفع..." : "اختيار الملف"}
+                                  </Button>
+                                  {isUploadingOther ? (
+                                    <span className="text-xs text-amber-600 font-bold animate-pulse">⏳ جاري الحفظ سحابياً...</span>
+                                  ) : otherCertPreview ? (
+                                    <span className="text-xs text-green-700 font-bold">✅ تم الرفع بنجاح</span>
+                                  ) : null}
                                 </div>
                               </div>
                             </FormControl>
-                            {otherCertPreview && (
+                            {otherCertPreview && !isUploadingOther && (
                               <button type="button" className="text-xs text-destructive hover:underline mt-1 block" onClick={() => { setOtherCertPreview(null); form.setValue("otherCertificateUrl", ""); }}>حذف الشهادة التخصصية</button>
                             )}
                             <FormMessage />
@@ -575,19 +652,21 @@ export default function Home() {
                 </div>
               </section>
 
-              {/* زر الإرسال النهائي المحمي بالوقت وبحالة الـ Submission */}
+              {/* زر الإرسال النهائي المحمي بالوقت وبحالة الـ Submission والـ Cloudinary Uploads */}
               <div className="pt-4">
                 <Button 
                   type="submit" 
                   size="lg" 
                   className="w-full text-lg h-14 bg-gradient-to-r from-[#A31D22] to-[#C1272D] hover:from-[#C1272D] hover:to-[#8B1519]" 
-                  disabled={form.formState.isSubmitting || timeLeft.ended}
+                  disabled={form.formState.isSubmitting || timeLeft.ended || isUploadingPhoto || isUploadingTot || isUploadingOther}
                 >
                   {timeLeft.ended 
                     ? "انتهى زمن الحصر والتسجيل الرسمي" 
-                    : form.formState.isSubmitting 
-                      ? "جاري مراجعة وحفظ البيانات برمجياً..." 
-                      : "تسجيل واعتماد البيانات الرقمية"
+                    : (isUploadingPhoto || isUploadingTot || isUploadingOther)
+                      ? "يرجى الانتظار حتى اكتمال رفع الملفات سحابياً..."
+                      : form.formState.isSubmitting 
+                        ? "جاري مراجعة وحفظ البيانات برمجياً..." 
+                        : "تسجيل واعتماد البيانات الرقمية"
                   }
                 </Button>
               </div>
