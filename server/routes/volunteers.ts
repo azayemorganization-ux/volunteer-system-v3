@@ -5,30 +5,37 @@ import { volunteersTable, unitsTable, insertVolunteerSchema } from "../db/schema
 
 const router = Router();
 
-// --- 1. دالة مساعدة لتحديد الوحدات المسموح بها لمشرف القطاع جغرافياً ---
+// --- 1. دالة مساعدة لتحديد الوحدات المسموح بها للمشرفين (تم تصليحها لتفهم المصفوفات والنصوص) ---
 function getAdminUnitCondition(req) {
   const admin = req.session.admin;
-  if (!admin) return eq(volunteersTable.id, -1); // شرط مستحيل للحماية
+  if (!admin) return eq(volunteersTable.id, -1); // شرط مستحيل للحماية لو مافي سيشن
 
   const role = admin.role;
   const assignedUnitsRaw = admin.assignedUnits;
 
-  // المشرف الرئيسي يشوف كل شيء
+  // المشرف الرئيسي (superadmin) يشوف كل شيء
   if (role === "superadmin") return null;
 
-  // مشرف قطاع عنده وحدات مخصصة (مثلاً 4 وحدات)
-  if (assignedUnitsRaw) {
-    const unitIds = String(assignedUnitsRaw)
+  // تجهيز مصفوفة الأرقام للوحدات
+  let unitIds: number[] = [];
+
+  if (Array.isArray(assignedUnitsRaw)) {
+    // لو كانت مصفوفة جاهزة (النظام الجديد)
+    unitIds = assignedUnitsRaw.map((id) => Number(id)).filter((n) => !isNaN(n) && n > 0);
+  } else if (assignedUnitsRaw && typeof assignedUnitsRaw === "string" && assignedUnitsRaw.trim() !== "") {
+    // لو كان نص مفصول بفاصلة (النظام القديم)
+    unitIds = assignedUnitsRaw
       .split(",")
       .map((id) => Number(id.trim()))
-      .filter((n) => !isNaN(n));
-
-    if (unitIds.length > 0) {
-      return inArray(volunteersTable.unitId, unitIds);
-    }
+      .filter((n) => !isNaN(n) && n > 0);
   }
 
-  return eq(volunteersTable.id, -1); // احتياطاً لا يرى شيء
+  // إذا عنده وحدات مخصصة فعلاً، نفلتر بيها
+  if (unitIds.length > 0) {
+    return inArray(volunteersTable.unitId, unitIds);
+  }
+
+  return eq(volunteersTable.id, -1); // احتياطاً لو ما عنده وحدات مسموحة ما يشوف شيء
 }
 
 // --- 2. توليد معرف المتطوع الاحترافي التلقائي ---
@@ -64,7 +71,6 @@ router.get("/public/:id", async (req, res) => {
     const { id } = req.params;
     const decodedId = decodeURIComponent(id).trim();
 
-    // البحث بـ الـ volunteerId النصي أو الـ id الرقمي
     const isNumber = !isNaN(Number(decodedId));
 
     const results = await db
@@ -99,7 +105,7 @@ router.get("/public/:id", async (req, res) => {
 });
 
 // ========================================================
-// 5. مسار الأدمن لجلب وعرض قائمة المتطوعين مع الفلاتر الذكية (تم التحديث للحماية)
+// 5. مسار الأدمن لجلب وعرض قائمة المتطوعين مع الفلاتر الذكية
 // ========================================================
 router.get("/", async (req, res) => {
   if (!requireAdmin(req, res)) return;
@@ -108,21 +114,17 @@ router.get("/", async (req, res) => {
     const { unitId, search, status } = req.query;
     const unitCondition = getAdminUnitCondition(req);
 
-    // تجهيز شروط الفلترة بناءً على الطلب قادم من الفرونت إند مع حماية كاملة
     const conditions = [];
     if (unitCondition) conditions.push(unitCondition);
 
-    // 1. التحقق من أن الـ unitId ممرر وقيمته صالحة وليست النص "undefined" أو NaN
     if (unitId && unitId !== "undefined" && !isNaN(Number(unitId))) {
       conditions.push(eq(volunteersTable.unitId, Number(unitId)));
     }
 
-    // 2. التحقق من أن الحالة ليست "all" وليست "undefined" وليست فارغة
     if (status && status !== "all" && status !== "undefined" && String(status).trim() !== "") {
       conditions.push(eq(volunteersTable.status, String(status)));
     }
 
-    // 3. التحقق من أن نص البحث ليس "undefined" وليس نصاً فارغاً
     if (search && search !== "undefined" && String(search).trim() !== "") {
       conditions.push(ilike(volunteersTable.fullName, `%${String(search).trim()}%`));
     }
@@ -134,7 +136,7 @@ router.get("/", async (req, res) => {
       })
       .from(volunteersTable)
       .leftJoin(unitsTable, eq(volunteersTable.unitId, unitsTable.id))
-      .where(conditions.length > 0 ? and(...conditions) : undefined) // حماية في حال عدم وجود أي شروط لضمان جلب الكل بسلاسة
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(volunteersTable.createdAt));
 
     res.json(
@@ -158,7 +160,6 @@ router.get("/stats", async (req, res) => {
 
   try {
     const unitCondition = getAdminUnitCondition(req);
-
     const conditions = unitCondition ? [unitCondition] : [];
 
     const allVolunteers = await db
@@ -169,14 +170,13 @@ router.get("/stats", async (req, res) => {
       })
       .from(volunteersTable)
       .leftJoin(unitsTable, eq(volunteersTable.unitId, unitsTable.id))
-      .where(and(...conditions));
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
 
     let total = allVolunteers.length;
     let approved = allVolunteers.filter(v => v.status === "approved").length;
     let pending = allVolunteers.filter(v => v.status === "pending").length;
     let rejected = allVolunteers.filter(v => v.status === "rejected").length;
 
-    // حساب إحصائيات الوحدات المعتمدة
     const unitCounts = {};
     allVolunteers.filter(v => v.status === "approved").forEach(v => {
       const name = v.unitName || "غير محدد";
@@ -297,18 +297,10 @@ router.post("/", async (req, res) => {
 });
 
 // ========================================================
-// 9. عمليات المراجعة المحصنة: الاعتماد (Approve) والرفض (Reject) والحذف
+// 9. عمليات المراجعة المحصنة: الاعتماد والرفض والحذف
 // ========================================================
 router.post("/:id/approve", async (req, res) => {
-  console.log("📢 [HIT] تم استقبال طلب اعتماد للمتطوع ID الحالي:", req.params.id);
-  console.log("👤 [SESSION COOKIE CHECK] بيانات الأدمن في السيشن حالياً:", req.session?.admin);
-
-  if (!requireAdmin(req, res)) {
-    console.log("❌ [AUTH FAILED] السيشن فارغ أو المتصفح رفض إرسال الكوكي (Cross-Site Cookie Blocked)");
-    return;
-  }
-
-  console.log("🔓 [AUTH SUCCESS] تم التحقق من صلاحية المشرف، جاري معالجة تحديث البيانات في نيون...");
+  if (!requireAdmin(req, res)) return;
 
   try {
     const { id } = req.params;
@@ -316,13 +308,10 @@ router.post("/:id/approve", async (req, res) => {
     const isNumber = !isNaN(Number(decodedId));
 
     const adminName = req.session.admin?.username || "مشرف نظام";
-    console.log(`📝 [PROCESS] اسم المشرف: ${adminName} | المعرف الممرر: ${decodedId} (نوعه رقم: ${isNumber})`);
 
     const whereCondition = isNumber
       ? or(eq(volunteersTable.volunteerId, decodedId), eq(volunteersTable.id, Number(decodedId)))
       : eq(volunteersTable.volunteerId, decodedId);
-
-    console.log("⏳ [DATABASE] جاري إرسال أمر التحديث الـ UPDATE إلى Neon Database... ");
 
     const [updated] = await db
       .update(volunteersTable)
@@ -335,15 +324,13 @@ router.post("/:id/approve", async (req, res) => {
       .returning();
 
     if (!updated) {
-      console.log("⚠️ [NOT FOUND] الداتابيز لم تجد أي سجل يطابق هذا المعرف!");
       res.status(404).json({ error: "عفواً، لم يتم العثور على المتطوع لتحديث حالته" });
       return;
     }
 
-    console.log("✅ [SUCCESS] تم التحديث بنجاح في نيون للمتطوع وبدء الحفظ:", updated.fullName);
     res.json(updated);
   } catch (err) {
-    console.error("💥 [CRASH ERROR] Approve API Error Log:", err);
+    console.error("Approve API Error Log:", err);
     res.status(500).json({ error: "فشل اعتماد طلب المتطوع" });
   }
 });

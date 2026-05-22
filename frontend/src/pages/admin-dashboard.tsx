@@ -185,7 +185,8 @@ export default function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="stats"><StatsTab /></TabsContent>
-          <TabsContent value="pending"><PendingTab isSuperadmin={isSuperadmin} /></TabsContent>
+          {/* 🎯 تم تعديل السطر التالي لتمرير الـ role بنجاح لمكون الطلبات المعلقة */}
+          <TabsContent value="pending"><PendingTab isSuperadmin={isSuperadmin} role={admin?.role} /></TabsContent>
           <TabsContent value="directory"><DirectoryTab isSuperadmin={isSuperadmin} /></TabsContent>
           {isSuperadmin && <TabsContent value="units"><UnitsTab /></TabsContent>}
           {isSuperadmin && <TabsContent value="admins"><AdminsTab /></TabsContent>}
@@ -521,7 +522,7 @@ function ProfileDialog({ volunteer, open, onClose, isSuperadmin, onRefresh }: {
 
 // ─── Pending Tab ──────────────────────────────────────────────────────────────
 
-function PendingTab({ isSuperadmin }: { isSuperadmin: boolean }) {
+function PendingTab({ isSuperadmin, role }: { isSuperadmin: boolean; role?: string }) {
   const { toast } = useToast();
   const [selected, setSelected] = useState<any | null>(null);
   const [volunteers, setVolunteers] = useState<any[]>([]);
@@ -589,7 +590,12 @@ function PendingTab({ isSuperadmin }: { isSuperadmin: boolean }) {
           {isLoading ? (
             <div className="py-12 text-center">جاري تحميل الطلبات المعلقة...</div>
           ) : !volunteers?.length ? (
-            <div className="py-16 text-center text-muted-foreground">لا توجد أي طلبات معلقة حالياً في قطاعك</div>
+            <div className="py-16 text-center text-muted-foreground">
+              {/* 🎯 النص الذكي يتغير هنا حسب رتبة المستخدم الحالية */}
+              {isSuperadmin || role === "superadmin" ? "لا توجد أي طلبات معلقة حالياً في النظام" : 
+               role === "subadmin" ? "لا توجد أي طلبات معلقة حالياً في وحدتك الإدارية" : 
+               "لا توجد أي طلبات معلقة حالياً في قطاعك"}
+            </div>
           ) : (
             <div className="border rounded-md overflow-x-auto">
               <Table>
@@ -650,9 +656,11 @@ function PendingTab({ isSuperadmin }: { isSuperadmin: boolean }) {
   );
 }
 
+
 // ─── Directory Tab ────────────────────────────────────────────────────────────
 
 function DirectoryTab({ isSuperadmin }: { isSuperadmin: boolean }) {
+  const { toast } = useToast(); // 🎯 تم الاستدعاء هنا لتفعيل تنبيهات التحميل والتصدير
   const [unitFilter, setUnitFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -680,30 +688,54 @@ function DirectoryTab({ isSuperadmin }: { isSuperadmin: boolean }) {
     loadDirectoryData();
   }, [unitFilter, searchQuery, statusFilter]);
 
+  // 🎯 تعديل دالة التصدير لتصبح متوافقة بالكامل وتظهر تفاصيل الأخطاء عبر الـ Toast
   const exportToExcel = () => {
-    if (!volunteers?.length) return;
-    const worksheet = XLSX.utils.json_to_sheet(volunteers.map(v => ({
-      "الاسم": v.fullName,
-      "الرقم الوطني": v.nationalId,
-      "الوحدة": v.unitName,
-      "القطاع": v.sectorName || "—",
-      "الهاتف": v.phone,
-      "الحالة": v.status === "approved" ? "معتمد" : v.status === "rejected" ? "مرفوض" : "قيد الانتظار"
-    })));
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "المتطوعون");
-    XLSX.utils.writeFile(workbook, "volunteers_report.xlsx");
+    try {
+      if (!volunteers?.length) {
+        toast({ variant: "destructive", title: "تنبيه", description: "لا توجد أي بيانات حالياً في الجدول لتصديرها!" });
+        return;
+      }
+
+      toast({ title: "جاري تجهيز ملف Excel...", description: "يرجى الانتظار لحين بدء التحميل" });
+
+      const worksheet = XLSX.utils.json_to_sheet(volunteers.map(v => ({
+        "الاسم": v.fullName,
+        "الرقم الوطني": v.nationalId,
+        "الوحدة": v.unitName,
+        "القطاع": v.sectorName || "—",
+        "الهاتف": v.phone,
+        "الحالة": v.status === "approved" ? "معتمد" : v.status === "rejected" ? "مرفوض" : "قيد الانتظار"
+      })));
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "المتطوعون");
+      
+      // التنزيل الفعلي للملف
+      XLSX.writeFile(workbook, "volunteers_report.xlsx");
+      
+      toast({ title: "تم التصدير بنجاح!", description: "إذا لم يبدأ تنزيل الملف، يرجى فحص صلاحيات التحميل بمتصفحك." });
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "خطأ في التصدير", description: "حدثت مشكلة أثناء محاولة إنشاء ملف Excel." });
+    }
   };
 
   const exportToPDF = () => {
-    if (!volunteers?.length) return;
-    const doc = new jsPDF();
-    (doc as any).autoTable({
-      head: [['الاسم', 'الوحدة', 'القطاع', 'الحالة']],
-      body: volunteers.map(v => [v.fullName, v.unitName, v.sectorName || "—", v.status]),
-      styles: { font: "helvetica", halign: 'right' }
-    });
-    doc.save("volunteers_report.pdf");
+    if (!volunteers?.length) {
+      toast({ variant: "destructive", title: "تنبيه", description: "لا توجد بيانات لتصديرها لـ PDF" });
+      return;
+    }
+    try {
+      const doc = new jsPDF();
+      (doc as any).autoTable({
+        head: [['الاسم', 'الوحدة', 'القطاع', 'الحالة']],
+        body: volunteers.map(v => [v.fullName, v.unitName, v.sectorName || "—", v.status]),
+        styles: { font: "helvetica", halign: 'right' }
+      });
+      doc.save("volunteers_report.pdf");
+      toast({ title: "تم تصدير ملف PDF بنجاح" });
+    } catch {
+      toast({ variant: "destructive", title: "خطأ", description: "فشل تصدير ملف PDF" });
+    }
   };
 
   return (
