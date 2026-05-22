@@ -99,7 +99,7 @@ router.get("/public/:id", async (req, res) => {
 });
 
 // ========================================================
-// 5. مسار الأدمن لجلب وعرض قائمة المتطوعين مع الفلاتر الذكية
+// 5. مسار الأدمن لجلب وعرض قائمة المتطوعين مع الفلاتر الذكية (تم التحديث للحماية)
 // ========================================================
 router.get("/", async (req, res) => {
   if (!requireAdmin(req, res)) return;
@@ -108,12 +108,24 @@ router.get("/", async (req, res) => {
     const { unitId, search, status } = req.query;
     const unitCondition = getAdminUnitCondition(req);
 
-    // تجهيز شروط الفلترة بناءً على الطلب قادم من الفرونت إند
+    // تجهيز شروط الفلترة بناءً على الطلب قادم من الفرونت إند مع حماية كاملة
     const conditions = [];
     if (unitCondition) conditions.push(unitCondition);
-    if (unitId) conditions.push(eq(volunteersTable.unitId, Number(unitId)));
-    if (status && status !== "all") conditions.push(eq(volunteersTable.status, String(status)));
-    if (search) conditions.push(ilike(volunteersTable.fullName, `%${search}%`));
+
+    // 1. التحقق من أن الـ unitId ممرر وقيمته صالحة وليست النص "undefined" أو NaN
+    if (unitId && unitId !== "undefined" && !isNaN(Number(unitId))) {
+      conditions.push(eq(volunteersTable.unitId, Number(unitId)));
+    }
+
+    // 2. التحقق من أن الحالة ليست "all" وليست "undefined" وليست فارغة
+    if (status && status !== "all" && status !== "undefined" && String(status).trim() !== "") {
+      conditions.push(eq(volunteersTable.status, String(status)));
+    }
+
+    // 3. التحقق من أن نص البحث ليس "undefined" وليس نصاً فارغاً
+    if (search && search !== "undefined" && String(search).trim() !== "") {
+      conditions.push(ilike(volunteersTable.fullName, `%${String(search).trim()}%`));
+    }
 
     const results = await db
       .select({
@@ -122,7 +134,7 @@ router.get("/", async (req, res) => {
       })
       .from(volunteersTable)
       .leftJoin(unitsTable, eq(volunteersTable.unitId, unitsTable.id))
-      .where(and(...conditions))
+      .where(conditions.length > 0 ? and(...conditions) : undefined) // حماية في حال عدم وجود أي شروط لضمان جلب الكل بسلاسة
       .orderBy(desc(volunteersTable.createdAt));
 
     res.json(
@@ -133,7 +145,7 @@ router.get("/", async (req, res) => {
       }))
     );
   } catch (err) {
-    console.error(err);
+    console.error("Error in fetching volunteers list:", err);
     res.status(500).json({ error: "خطأ في جلب بيانات المتطوعين" });
   }
 });
@@ -287,7 +299,6 @@ router.post("/", async (req, res) => {
 // ========================================================
 // 9. عمليات المراجعة المحصنة: الاعتماد (Approve) والرفض (Reject) والحذف
 // ========================================================
-// 🛠️ تم تعديلها هنا إلى POST لتطابق طلب الفرونت إند تماماً
 router.post("/:id/approve", async (req, res) => {
   console.log("📢 [HIT] تم استقبال طلب اعتماد للمتطوع ID الحالي:", req.params.id);
   console.log("👤 [SESSION COOKIE CHECK] بيانات الأدمن في السيشن حالياً:", req.session?.admin);
@@ -311,7 +322,7 @@ router.post("/:id/approve", async (req, res) => {
       ? or(eq(volunteersTable.volunteerId, decodedId), eq(volunteersTable.id, Number(decodedId)))
       : eq(volunteersTable.volunteerId, decodedId);
 
-    console.log("⏳ [DATABASE] جاري إرسال أمر التحديث الـ UPDATE إلى Neon Database...");
+    console.log("⏳ [DATABASE] جاري إرسال أمر التحديث الـ UPDATE إلى Neon Database... ");
 
     const [updated] = await db
       .update(volunteersTable)
@@ -337,7 +348,6 @@ router.post("/:id/approve", async (req, res) => {
   }
 });
 
-// 🛠️ تم تعديلها هنا أيضاً إلى POST احتياطاً لمنع نفس الخلل عند الرفض
 router.post("/:id/reject", async (req, res) => {
   if (!requireAdmin(req, res)) return;
 
