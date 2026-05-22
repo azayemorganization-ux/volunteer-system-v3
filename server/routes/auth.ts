@@ -9,7 +9,7 @@ const SUPERADMINS: Record<string, any> = {
 
 const router = Router();
 
-// دالة مساعدة لتحويل نص الوحدات (مثل "1,2,3") إلى مصفوفة أرقام نظيفة لعدم تضارب الأنواع
+// دالة تحويل الوحدات إلى أرقام
 function parseAssignedUnits(unitsStr: string | null | undefined): number[] {
   if (!unitsStr || typeof unitsStr !== "string") return [];
   return unitsStr
@@ -25,35 +25,32 @@ router.post("/login", async (req, res) => {
   console.log(`📢 [HIT] محاولة تسجيل دخول جديدة للحساب: [${username}]`);
 
   if (!username || !password) {
-    console.log("⚠️ [LOGIN FAILED] اسم المستخدم أو كلمة المرور فارغة");
     res.status(400).json({ error: "الرجاء إدخال اسم المستخدم وكلمة المرور" });
     return;
   }
 
-  // أولاً: الأدمن الرئيسي (أنت)
+  // أولاً: الأدمن الرئيسي
   const hardcoded = SUPERADMINS[username];
   if (hardcoded && String(hardcoded.password) === String(password).trim()) {
-    
-    // تأمين البيانات المرسلة للسيشن كأنواع متوافقة
+    console.log("🔓 [PROCESS] حساب أدمن رئيسي صحيح. جاري إعداد السيشن...");
+
     // @ts-ignore
     req.session.admin = {
       username,
-      role: hardcoded.role, // superadmin
-      assignedUnits: [],    // مصفوفة فارغة تعني السوبر أدمن يرى الكل ولا يتقيد بـ ID نصي
+      role: hardcoded.role,
+      assignedUnits: [], 
     };
 
-    try {
-      console.log("⏳ [SESSION SAVE] جاري حفظ جلسة الأدمن الرئيسي...");
-      await new Promise<void>((resolve, reject) => {
-        // @ts-ignore
-        req.session.save((err) => (err ? reject(err) : resolve()));
-      });
-      console.log(`✅ [SUCCESS] تم دخول الأدمن الرئيسي [${username}] وحفظ الجلسة بنجاح.`);
-      return res.json({ success: true, role: hardcoded.role, username });
-    } catch (saveErr) {
-      console.error("💥 [SESSION SAVE ERROR]:", saveErr);
-      return res.status(500).json({ error: "حدث خطأ أثناء حفظ جلسة الدخول" });
-    }
+    // كسر التعليقة الصامتة: نحفظ السيشن وفي نفس الوقت نرسل الرد فوراً دون انتظار معلق
+    // @ts-ignore
+    req.session.save((err) => {
+      if (err) console.error("⚠️ [SESSION SAVE ERROR]:", err);
+      else console.log("💾 [SESSION SUCCESS] تم حفظ جلسة الأدمن بنجاح.");
+    });
+
+    console.log(`🚀 [SUCCESS] إرسال استجابة الدخول بنجاح للأدمن: [${username}]`);
+    res.json({ success: true, role: hardcoded.role, username });
+    return;
   }
 
   // ثانياً: المشرفين الفرعيين
@@ -66,38 +63,32 @@ router.post("/login", async (req, res) => {
       .where(eq(subAdminsTable.username, String(username).trim()))
       .limit(1);
     
-    if (!dbAdmin) {
-      console.log(`❌ [LOGIN FAILED] المستخدم غير موجود في الداتابيز: [${username}]`);
-      return res.status(401).json({ error: "اسم المستخدم أو كلمة المرور غير صحيحة" });
+    if (!dbAdmin || String(dbAdmin.password) !== String(password).trim()) {
+      console.log(`❌ [LOGIN FAILED] بيانات الدخول غير صحيحة للمستخدم: [${username}]`);
+      res.status(401).json({ error: "اسم المستخدم أو كلمة المرور غير صحيحة" });
+      return;
     }
 
-    console.log(`📡 [DATABASE RESPONSE] تم جلب بيانات [${username}] بنجاح. جاري مطابقة الباسورد...`);
+    console.log(`📡 [DATABASE RESPONSE] تم العثور على [${username}] وتطابق البيانات.`);
 
-    if (String(dbAdmin.password) !== String(password).trim()) {
-      console.log(`❌ [LOGIN FAILED] كلمة المرور غير مطابقة للمستخدم: [${username}]`);
-      return res.status(401).json({ error: "اسم المستخدم أو كلمة المرور غير صحيحة" });
-    }
-
-    // تجهيز الوحدات وتحويلها لنفس نوع بيانات جدول المتطوعين (Numbers) منعاً لخطأ 22P02
     const safeUnits = parseAssignedUnits(dbAdmin.assignedUnits);
 
     // @ts-ignore
     req.session.admin = {
       username: dbAdmin.username,
       role: dbAdmin.role || "subadmin", 
-      assignedUnits: safeUnits, // أصبحت مصفوفة أرقام ملائمة ومؤمنة تماماً
+      assignedUnits: safeUnits,
     };
 
-    console.log(`⏳ [SESSION SAVE] جاري حفظ جلسة المشرف الفرعي [${username}] في الذاكرة...`);
-    
+    // حفظ السيشن بشكل خلفي لعدم تعليق الطلب
     // @ts-ignore
-    await new Promise<void>((resolve, reject) => { 
-      // @ts-ignore
-      req.session.save(err => err ? reject(err) : resolve()); 
+    req.session.save((err) => {
+      if (err) console.error("⚠️ [SESSION SAVE ERROR]:", err);
+      else console.log(`💾 [SESSION SUCCESS] تم حفظ جلسة المشرف [${username}] بنجاح.`);
     });
 
-    console.log(`✅ [SUCCESS] تم دخول المشرف [${username}] بنجاح. الوحدات كأرقام:`, safeUnits);
-    return res.json({
+    console.log(`🚀 [SUCCESS] إرسال استجابة الدخول بنجاح للمشرف: [${username}]`);
+    res.json({
       success: true,
       role: dbAdmin.role || "subadmin",
       username: dbAdmin.username,
@@ -105,7 +96,7 @@ router.post("/login", async (req, res) => {
 
   } catch (error: any) {
     console.error("💥 [CRITICAL AUTH ERROR]:", error.message || error);
-    return res.status(500).json({ error: "حدث خطأ في الخادم أثناء معالجة البيانات، تفقد أنواع الحقول" });
+    res.status(500).json({ error: "حدث خطأ في السيرفر أثناء معالجة الدخول" });
   }
 });
 
@@ -113,29 +104,24 @@ router.post("/login", async (req, res) => {
 router.post("/logout", async (req, res) => {
   // @ts-ignore
   if (req.session) {
-    try {
-      await new Promise<void>((resolve, reject) => {
-        // @ts-ignore
-        req.session.destroy((err) => (err ? reject(err) : resolve()));
-      });
-      res.clearCookie("srcs_volunteer_session", { path: "/", secure: true, sameSite: "none" });
-      return res.json({ success: true });
-    } catch (err) {
-      return res.status(500).json({ error: "خطأ في تسجيل الخروج" });
-    }
-  } else {
-    return res.json({ success: true });
+    // @ts-ignore
+    req.session.destroy((err) => {
+      if (err) console.error("💥 خطأ أثناء تدمير السيشن:", err);
+    });
   }
+  res.clearCookie("srcs_volunteer_session", { path: "/", secure: true, sameSite: "none" });
+  res.json({ success: true });
 });
 
 // ---------------- 3️⃣ فحص حالة الدخول الحالية (ME) ----------------
 router.get("/me", async (req, res) => {
   // @ts-ignore
   if (!req.session || !req.session.admin) {
-    return res.status(401).json({ error: "غير مسجل الدخول" });
+    res.status(401).json({ error: "غير مسجل الدخول" });
+    return;
   }
   // @ts-ignore
-  return res.json(req.session.admin);
+  res.json(req.session.admin);
 });
 
 export default router;
