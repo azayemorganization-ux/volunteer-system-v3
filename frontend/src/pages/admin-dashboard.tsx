@@ -185,7 +185,6 @@ export default function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="stats"><StatsTab /></TabsContent>
-          {/* 🎯 تم تعديل السطر التالي لتمرير الـ role بنجاح لمكون الطلبات المعلقة */}
           <TabsContent value="pending"><PendingTab isSuperadmin={isSuperadmin} role={admin?.role} /></TabsContent>
           <TabsContent value="directory"><DirectoryTab isSuperadmin={isSuperadmin} /></TabsContent>
           {isSuperadmin && <TabsContent value="units"><UnitsTab /></TabsContent>}
@@ -204,7 +203,7 @@ function StatsTab() {
 
   const loadStats = () => {
     setIsLoading(true);
-    fetchStats() // استخدام الدالة الآمنة من جسر الـ API
+    fetchStats()
       .then(setStats)
       .catch(() => {})
       .finally(() => setIsLoading(false));
@@ -591,7 +590,6 @@ function PendingTab({ isSuperadmin, role }: { isSuperadmin: boolean; role?: stri
             <div className="py-12 text-center">جاري تحميل الطلبات المعلقة...</div>
           ) : !volunteers?.length ? (
             <div className="py-16 text-center text-muted-foreground">
-              {/* 🎯 النص الذكي يتغير هنا حسب رتبة المستخدم الحالية */}
               {isSuperadmin || role === "superadmin" ? "لا توجد أي طلبات معلقة حالياً في النظام" : 
                role === "subadmin" ? "لا توجد أي طلبات معلقة حالياً في وحدتك الإدارية" : 
                "لا توجد أي طلبات معلقة حالياً في قطاعك"}
@@ -660,7 +658,7 @@ function PendingTab({ isSuperadmin, role }: { isSuperadmin: boolean; role?: stri
 // ─── Directory Tab ────────────────────────────────────────────────────────────
 
 function DirectoryTab({ isSuperadmin }: { isSuperadmin: boolean }) {
-  const { toast } = useToast(); // 🎯 تم الاستدعاء هنا لتفعيل تنبيهات التحميل والتصدير
+  const { toast } = useToast();
   const [unitFilter, setUnitFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -688,7 +686,6 @@ function DirectoryTab({ isSuperadmin }: { isSuperadmin: boolean }) {
     loadDirectoryData();
   }, [unitFilter, searchQuery, statusFilter]);
 
-  // 🎯 تعديل دالة التصدير لتصبح متوافقة بالكامل وتظهر تفاصيل الأخطاء عبر الـ Toast
   const exportToExcel = () => {
     try {
       if (!volunteers?.length) {
@@ -708,11 +705,8 @@ function DirectoryTab({ isSuperadmin }: { isSuperadmin: boolean }) {
       })));
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "المتطوعون");
-      
-      // التنزيل الفعلي للملف
       XLSX.writeFile(workbook, "volunteers_report.xlsx");
-      
-      toast({ title: "تم التصدير بنجاح!", description: "إذا لم يبدأ تنزيل الملف، يرجى فحص صلاحيات التحميل بمتصفحك." });
+      toast({ title: "تم التصدير بنجاح!" });
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "خطأ في التصدير", description: "حدثت مشكلة أثناء محاولة إنشاء ملف Excel." });
@@ -962,6 +956,8 @@ function AdminsTab() {
       return;
     }
 
+    // 🎯 هنا الإصلاح الذكي: إذا كان مشرف فرعي (كل الوحدات)، بنجمع كل معرفات الوحدات فوراً ونمررها بدلاً من null
+    const allUnitIds = units?.map(u => u.id).join(",") || "";
     const sectorUnits = units?.filter(u => u.sector === form.sector).map(u => u.id).join(",") || "";
     setIsActionPending(true);
 
@@ -975,14 +971,15 @@ function AdminsTab() {
           password: form.password.trim(),
           displayName: form.displayName.trim() || null,
           role: form.role === "subadmin" ? "subadmin" : "sectoradmin",
-          assignedUnits: form.role === "sectoradmin" ? sectorUnits : null
+          // تمرير كل الوحدات للمشرف الفرعي العام ليتمكن السيرفر من فلترة وعرض القائمة كاملة له
+          assignedUnits: form.role === "subadmin" ? allUnitIds : sectorUnits
         })
       });
 
       if (res.ok) {
         setForm({ username: "", password: "", displayName: "", role: "subadmin", sector: "" });
         loadAdminsAndUnits();
-        toast({ title: "تم إنشاء حساب المشرف وتخصيص الصلاحيات بنجاح" });
+        toast({ title: "تم إنشاء حساب المشرف وتخصيص الصلاحيات كاملة بنجاح" });
       } else {
         const errData = await res.json();
         throw new Error(errData.error || "فشل إنشاء الحساب");
