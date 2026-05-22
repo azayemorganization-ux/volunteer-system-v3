@@ -37,6 +37,31 @@ import { FileSpreadsheet, Download, Users, ShieldCheck } from "lucide-react";
 // استخدام المتغير الديناميكي لرابط الـ API المتصل بـ Render أو المحلي لعمليات الـ Auth المباشرة
 const API_URL = "https://volunteer-system-v3.onrender.com/api";
 
+// ─── الجسر الحارس لتخطي حظر المتصفحات والكوكيز على الموبايل ─────────────────
+const customFetch = async (url: string, options: RequestInit = {}) => {
+  const localAdmin = localStorage.getItem("admin_user");
+  const headers = new Headers(options.headers || {});
+  
+  if (localAdmin) {
+    try {
+      const parsedAdmin = JSON.parse(localAdmin);
+      // تمرير الهوية في الـ Headers لتخطي جدار الكوكيز الصارم في الهواتف
+      headers.append("X-Admin-User", parsedAdmin.username || "");
+      headers.append("X-Admin-Role", parsedAdmin.role || "");
+      if (parsedAdmin.token) {
+        headers.append("Authorization", `Bearer ${parsedAdmin.token}`);
+      }
+    } catch (e) {
+      console.error("خطأ في قراءة بيانات الأدمن المحلية", e);
+    }
+  }
+  
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+};
+
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 const REJECTION_REASONS = [
@@ -69,7 +94,7 @@ export default function AdminDashboard() {
   const [admin, setAdmin] = useState<any>(null);
   const [adminLoading, setAdminLoading] = useState(true);
 
-    useEffect(() => {
+  useEffect(() => {
     // التحقق أولاً من وجود مفتاح العبور المحلي لتفادي مشاكل الـ Cookies عابرة القارات
     const localAdmin = localStorage.getItem("admin_user");
     
@@ -79,16 +104,15 @@ export default function AdminDashboard() {
         setAdmin(parsedAdmin);
         setAdminLoading(false);
         
-        // تحديث البيانات من السيرفر في الخلفية احتياطاً للتأكد من الصلاحيات والربط بالرابط الصحيح
-        fetch(`${API_URL}/auth/me`, { credentials: "include" })
+        // تحديث البيانات من السيرفر عبر الجسر الذكي
+        customFetch(`${API_URL}/auth/me`, { credentials: "include" })
           .then(res => res.ok ? res.json() : Promise.reject())
           .then((freshAdmin) => {
             setAdmin(freshAdmin);
             localStorage.setItem("admin_user", JSON.stringify(freshAdmin));
           })
           .catch(() => {
-            // نترك الجلسة المحلية تعمل طالما البيانات محفوظة محلياً ولا نطرد القائد بسبب الـ Cookies
-            console.log("السيرفر مستجيب ولكن الكوكيز مقيدة جغرافياً بالمتصفح");
+            console.log("السيرفر مستجيب ولكن الكوكيز مقيدة جغرافياً بالمتصفح - الاعتماد على الذاكرة المحلية");
           });
           
       } catch (e) {
@@ -97,8 +121,8 @@ export default function AdminDashboard() {
         setAdminLoading(false);
       }
     } else {
-      // إذا لم يجد تصريح دخول، يتأكد من السيرفر كخيار أخير وإلا يطرده
-      fetch(`${API_URL}/auth/me`, { credentials: "include" })
+      // إذا لم يجد تصريح دخول، يتأكد من السيرفر عبر الجسر الذكي كخيار أخير وإلا يطرده
+      customFetch(`${API_URL}/auth/me`, { credentials: "include" })
         .then(res => res.ok ? res.json() : Promise.reject())
         .then((serverAdmin) => {
           setAdmin(serverAdmin);
@@ -111,7 +135,7 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" });
+      await customFetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" });
     } catch (e) {
       console.log("تم تسجيل الخروج محلياً");
     }
@@ -267,7 +291,7 @@ function ProfileDialog({ volunteer, open, onClose, isSuperadmin, onRefresh }: {
   const handleApprove = async () => {
     setIsActionPending(true);
     try {
-      const res = await fetch(`${API_URL}/volunteers/${volunteer.id}/approve`, { 
+      const res = await customFetch(`${API_URL}/volunteers/${volunteer.id}/approve`, { 
         method: "POST",
         credentials: "include" 
       });
@@ -289,7 +313,7 @@ function ProfileDialog({ volunteer, open, onClose, isSuperadmin, onRefresh }: {
     const reason = rejectReason === "سبب آخر" ? (customReason.trim() || "سبب آخر") : rejectReason;
     setIsActionPending(true);
     try {
-      const res = await fetch(`${API_URL}/volunteers/${volunteer.id}/reject`, {
+      const res = await customFetch(`${API_URL}/volunteers/${volunteer.id}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -314,7 +338,7 @@ function ProfileDialog({ volunteer, open, onClose, isSuperadmin, onRefresh }: {
     if (!confirm(`هل أنت متأكد نهائياً من حذف سجل "${volunteer.fullName}"؟`)) return;
     setIsActionPending(true);
     try {
-      const res = await fetch(`${API_URL}/volunteers/${volunteer.id}`, { 
+      const res = await customFetch(`${API_URL}/volunteers/${volunteer.id}`, { 
         method: "DELETE",
         credentials: "include" 
       });
@@ -520,7 +544,7 @@ function PendingTab({ isSuperadmin }: { isSuperadmin: boolean }) {
   const handleApprove = async (v: any, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`${API_URL}/volunteers/${v.id}/approve`, { 
+      const res = await customFetch(`${API_URL}/volunteers/${v.id}/approve`, { 
         method: "POST",
         credentials: "include" 
       });
@@ -537,7 +561,7 @@ function PendingTab({ isSuperadmin }: { isSuperadmin: boolean }) {
     if (!rejectTarget) return;
     const reason = rejectReason === "سبب آخر" ? (customReason.trim() || "سبب آخر") : rejectReason;
     try {
-      const res = await fetch(`${API_URL}/volunteers/${rejectTarget.id}/reject`, {
+      const res = await customFetch(`${API_URL}/volunteers/${rejectTarget.id}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -792,7 +816,7 @@ function UnitsTab() {
     if (!newUnit.name.trim()) return;
     setIsActionPending(true);
     try {
-      const res = await fetch(`${API_URL}/units`, {
+      const res = await customFetch(`${API_URL}/units`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -814,7 +838,7 @@ function UnitsTab() {
     if (!confirm("هل أنت متأكد من حذف هذه الوحدة الجغرافية نهائياً؟")) return;
     setIsActionPending(true);
     try {
-      const res = await fetch(`${API_URL}/units/${id}`, { 
+      const res = await customFetch(`${API_URL}/units/${id}`, { 
         method: "DELETE",
         credentials: "include" 
       });
@@ -910,7 +934,7 @@ function AdminsTab() {
     setIsActionPending(true);
 
     try {
-      const res = await fetch(`${API_URL}/sub-admins`, {
+      const res = await customFetch(`${API_URL}/sub-admins`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -941,7 +965,7 @@ function AdminsTab() {
   const handleDeleteAdmin = async (id: number, username: string) => {
     if (!confirm(`هل أنت متأكد من حذف حساب المشرف (${username}) نهائياً؟`)) return;
     try {
-      const res = await fetch(`${API_URL}/sub-admins/${id}`, { 
+      const res = await customFetch(`${API_URL}/sub-admins/${id}`, { 
         method: "DELETE",
         credentials: "include" 
       });
