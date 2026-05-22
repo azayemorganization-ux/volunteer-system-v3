@@ -12,6 +12,12 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// 📢 ميكروفون لطباعة أي طلب يوصل السيرفر وكشف حركات الفرونت إند
+app.use((req, res, next) => {
+  console.log(`📢 [${req.method}] ووصل طلب على الرابط: ${req.url}`);
+  next();
+});
+
 const allowedOrigin = process.env.FRONTEND_URL || "https://volunteer-system-v3.vercel.app";
 
 app.use(
