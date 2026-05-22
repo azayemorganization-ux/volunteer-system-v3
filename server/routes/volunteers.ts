@@ -291,20 +291,31 @@ router.post("/", async (req, res) => {
 // 9. عمليات المراجعة المحصنة: الاعتماد (Approve) والرفض (Reject) والحذف
 // ========================================================
 router.patch("/:id/approve", async (req, res) => {
-  if (!requireAdmin(req, res)) return;
+  // 👇 1. سطر الكشف الأول: هل استقبل السيرفر النقرة أصلاً؟
+  console.log("📢 [HIT] تم استقبال طلب اعتماد للمتطوع ID الحالي:", req.params.id);
+  // 👇 2. سطر الكشف الثاني: هل الكوكي حقت السيشن واصلة ولا حجبها المتصفح؟
+  console.log("👤 [SESSION COOKIE CHECK] بيانات الأدمن في السيشن حالياً:", req.session?.admin);
+
+  if (!requireAdmin(req, res)) {
+    console.log("❌ [AUTH FAILED] السيشن فارغ أو المتصفح رفض إرسال الكوكي (Cross-Site Cookie Blocked)");
+    return;
+  }
+
+  console.log("🔓 [AUTH SUCCESS] تم التحقق من صلاحية المشرف، جاري معالجة تحديث البيانات في نيون...");
 
   try {
     const { id } = req.params;
     const decodedId = decodeURIComponent(id).trim();
     const isNumber = !isNaN(Number(decodedId));
 
-    // تأمين جلب اسم الأدمن من الجلسة لتجنب أي Crash
     const adminName = req.session.admin?.username || "مشرف نظام";
+    console.log(`📝 [PROCESS] اسم المشرف: ${adminName} | المعرف الممرر: ${decodedId} (نوعه رقم: ${isNumber})`);
 
-    // صياغة الشرط بطريقة ذكية تمنع تمرير undefined للمكتبة
     const whereCondition = isNumber
       ? or(eq(volunteersTable.volunteerId, decodedId), eq(volunteersTable.id, Number(decodedId)))
       : eq(volunteersTable.volunteerId, decodedId);
+
+    console.log("⏳ [DATABASE] جاري إرسال أمر التحديث الـ UPDATE إلى Neon Database...");
 
     const [updated] = await db
       .update(volunteersTable)
@@ -317,13 +328,15 @@ router.patch("/:id/approve", async (req, res) => {
       .returning();
 
     if (!updated) {
+      console.log("⚠️ [NOT FOUND] الداتابيز لم تجد أي سجل يطابق هذا المعرف!");
       res.status(404).json({ error: "عفواً، لم يتم العثور على المتطوع لتحديث حالته" });
       return;
     }
 
+    console.log("✅ [SUCCESS] تم التحديث بنجاح في نيون للمتطوع وبدء الحفظ:", updated.fullName);
     res.json(updated);
   } catch (err) {
-    console.error("Approve API Error Log:", err);
+    console.error("💥 [CRASH ERROR] Approve API Error Log:", err);
     res.status(500).json({ error: "فشل اعتماد طلب المتطوع" });
   }
 });
