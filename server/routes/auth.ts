@@ -1,9 +1,8 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js"; 
-import { subAdminsTable } from "../db/schema.js"; // تم الاستدعاء الصحيح بناءً على السكيما الحالية
+import { subAdminsTable } from "../db/schema.js"; 
 
-// حساب الأدمن الرئيسي الثابت الخاص بك (أعلى صلاحية)
 const SUPERADMINS: Record<string, any> = {
   admin: { password: "125", role: "superadmin" },
 };
@@ -24,13 +23,12 @@ router.post("/login", async (req, res) => {
 
   // أولاً: التحقق إذا كان الحساب هو الأدمن الرئيسي (أنت)
   const hardcoded = SUPERADMINS[username];
-  
   if (hardcoded && String(hardcoded.password) === String(password).trim()) {
     // @ts-ignore
     req.session.admin = {
       username,
-      role: hardcoded.role, // superadmin
-      assignedUnits: null,  // يرى الـ 16 وحدة بالكامل
+      role: hardcoded.role,
+      assignedUnits: null,
     };
 
     try {
@@ -38,13 +36,8 @@ router.post("/login", async (req, res) => {
         // @ts-ignore
         req.session.save((err) => (err ? reject(err) : resolve()));
       });
-
-      console.log(`✅ [SUCCESS] تم دخول الأدمن الرئيسي [${username}] بنجاح وتخزين السيشن.`);
-      res.json({
-        success: true,
-        role: hardcoded.role,
-        username,
-      });
+      console.log(`✅ [SUCCESS] تم دخول الأدمن الرئيسي [${username}] بنجاح.`);
+      res.json({ success: true, role: hardcoded.role, username });
       return;
     } catch (saveErr) {
       console.error("💥 [SESSION SAVE ERROR]:", saveErr);
@@ -53,52 +46,62 @@ router.post("/login", async (req, res) => {
     }
   }
 
-  // ثانياً: التحقق من المشرفين الآخرين (الفرعيين) من قاعدة بيانات نيون (Drizzle)
+  // ثانياً: التحقق من المشرفين الآخرين مع حماية ضد التعليق الصامت
   try {
     console.log(`🔍 [DATABASE CHECK] جاري البحث عن المشرف الفرعي [${username}] في جدول sub_admins...`);
     
-    // جلب بيانات المشرف الحقيقي المطابق لاسم المستخدم من جدول subAdminsTable
-    const [dbAdmin] = await db
+    // سباق وقت: لو الداتابيز خدت أكتر من 4 ثواني، اقطع الاتصال وارمي خطأ بدل التعليق
+    const dbPromise = db
       .select()
       .from(subAdminsTable)
       .where(eq(subAdminsTable.username, String(username).trim()))
       .limit(1);
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Database Timeout")), 4000)
+    );
+
+    // تنفيذ الاستعلام مع الحماية
+    const [dbAdmin] = (await Promise.race([dbPromise, timeoutPromise])) as any[];
     
-    // إذا لم يجد المشرف أو كانت كلمة المرور غير مطابقة
+    console.log(`📡 [DATABASE RESPONSE] تم جلب البيانات بنجاح للمستخدم: [${username}]`);
+
     if (!dbAdmin || String(dbAdmin.password) !== String(password).trim()) {
       console.log(`❌ [LOGIN FAILED] بيانات الدخول غير صحيحة للمستخدم الفرعي: [${username}]`);
       res.status(401).json({ error: "اسم المستخدم أو كلمة المرور غير صحيحة" });
       return;
     }
 
-    // إذا نجح الدخول، يتم حفظ الجلسة بالصلاحيات المحددة له في جدول sub_admins
     // @ts-ignore
     req.session.admin = {
       username: dbAdmin.username,
       role: dbAdmin.role || "subadmin", 
-      assignedUnits: dbAdmin.assignedUnits || null, // الوحدات المحددة له جغرافياً مثل: "1,2,3"
+      assignedUnits: dbAdmin.assignedUnits || null,
     };
 
-    // إجبار السيرفر على حفظ السيشن بالكامل والانتظار
     // @ts-ignore
     await new Promise<void>((resolve, reject) => { req.session.save(err => err ? reject(err) : resolve()); });
 
-    console.log(`✅ [SUCCESS] تم دخول المشرف الفرعي [${username}] بنجاح، الوحدات المصرحة له: [${dbAdmin.assignedUnits}]`);
+    console.log(`✅ [SUCCESS] تم دخول المشرف الفرعي [${username}] بنجاح.`);
     res.json({
       success: true,
       role: dbAdmin.role || "subadmin",
       username: dbAdmin.username,
     });
-  } catch (error) {
-    console.error("💥 Auth Database Error:", error);
-    res.status(500).json({ error: "حدث خطأ في الخادم أثناء التحقق من المشرف" });
+  } catch (error: any) {
+    console.error("💥 [CRITICAL AUTH ERROR]:", error.message || error);
+    
+    // إذا كان الخطأ بسبب الوقت المعلق
+    if (error.message === "Database Timeout") {
+      res.status(504).json({ error: "تأخرت استجابة قاعدة البيانات، يرجى المحاولة مرة أخرى" });
+    } else {
+      res.status(500).json({ error: "حدث خطأ في السيرفر أثناء الفحص، تأكد من رفع الجداول للداتابيز" });
+    }
   }
 });
 
 // ---------------- 2️⃣ تسجيل الخروج (LOGOUT) ----------------
 router.post("/logout", async (req, res) => {
-  console.log("📢 [HIT] طلب تسجيل خروج...");
-
   // @ts-ignore
   if (req.session) {
     try {
@@ -106,18 +109,10 @@ router.post("/logout", async (req, res) => {
         // @ts-ignore
         req.session.destroy((err) => (err ? reject(err) : resolve()));
       });
-
-      res.clearCookie("srcs_volunteer_session", {
-        path: "/",
-        secure: true,
-        sameSite: "none",
-      });
-
-      console.log("✅ [LOGOUT SUCCESS] تم تدمير الجلسة ومسح الكوكي بنجاح.");
+      res.clearCookie("srcs_volunteer_session", { path: "/", secure: true, sameSite: "none" });
       res.json({ success: true });
-    } catch (destroyErr) {
-      console.error("💥 [LOGOUT ERROR] فشل تدمير السيشن:", destroyErr);
-      res.status(500).json({ error: "حدث خطأ أثناء تسجيل الخروج" });
+    } catch (err) {
+      res.status(500).json({ error: "خطأ في تسجيل الخروج" });
     }
   } else {
     res.json({ success: true });
@@ -128,13 +123,9 @@ router.post("/logout", async (req, res) => {
 router.get("/me", async (req, res) => {
   // @ts-ignore
   if (!req.session || !req.session.admin) {
-    console.log("👤 [CHECK ME] فحص الجلسة: لا يوجد مستخدم نشط.");
-    res.status(401).json({ error: "غير مسجل الدخول، يرجى تسجيل الدخول أولاً" });
+    res.status(401).json({ error: "غير مسجل الدخول" });
     return;
   }
-  
-  // @ts-ignore
-  console.log("👤 [CHECK ME] فحص الجلسة: مستخدم نشط حالياً ->", req.session.admin.username);
   // @ts-ignore
   res.json(req.session.admin);
 });
