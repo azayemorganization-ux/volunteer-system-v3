@@ -15,6 +15,15 @@ export interface VolunteerCardData {
   createdAt: string;
 }
 
+// دالة استخراج الحروف الأولى من الاسم واسم الأب ديناميكياً
+const getInitials = (fullName: string) => {
+  if (!fullName) return "م";
+  const nameParts = fullName.trim().split(/\s+/);
+  const firstLetter = nameParts[0] ? nameParts[0][0] : "";
+  const fatherLetter = nameParts[1] ? nameParts[1][0] : "";
+  return `${firstLetter} ${fatherLetter}`.trim();
+};
+
 // 1. مكون البطاقة الرقمية الذكية (التصميم الأصلي الكامل مع الـ QR الديناميكي)
 export function IDCard({ volunteer }: { volunteer: VolunteerCardData }) {
   // إنشاء رابط التحقق التلقائي بناءً على نطاق الموقع الحالي
@@ -62,7 +71,7 @@ export function IDCard({ volunteer }: { volunteer: VolunteerCardData }) {
       <div className="absolute bottom-60 left-4 w-6 h-6 rounded-full border-2 border-red-50/40 opacity-70 pointer-events-none"></div>
       <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-red-800 via-red-600 to-red-800 shadow-md"></div>
 
-      {/* الترويسة والشعار الرسمي */}
+      {/* Tالترويسة والشعار الرسمي */}
       <div className="relative z-10 w-full mb-4 mt-4 flex flex-col items-center">
         <div className="w-16 h-16 mb-2 flex items-center justify-center">
           <svg viewBox="0 0 100 100" className="w-full h-full text-[#c10d28] drop-shadow-md" fill="currentColor">
@@ -88,8 +97,9 @@ export function IDCard({ volunteer }: { volunteer: VolunteerCardData }) {
             {volunteer.photoUrl ? (
               <img src={volunteer.photoUrl} className="w-full h-full object-cover" alt="Volunteer Face" />
             ) : (
-              <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-200">
-                 <svg className="w-14 h-14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              /* [تعديل] تظهر الحروف باللون العنابي الملكي عند عدم رفع صورة */
+              <div className="w-full h-full bg-[#991b1b] text-white flex items-center justify-center font-black text-2xl tracking-wider select-none">
+                {getInitials(volunteer.fullName)}
               </div>
             )}
           </div>
@@ -124,7 +134,8 @@ export function IDCard({ volunteer }: { volunteer: VolunteerCardData }) {
             </div>
             <div>
               <div className="text-[9px] text-gray-400 font-bold mb-0.5">الوحدة الميدانية</div>
-              <div className="text-[11px] font-black text-gray-700 truncate">{volunteer.unitName || "جبل أولياء"}</div>
+              {/* [تعديل] عرض الوحدة المعبأة في الاستمارة ديناميكياً بالكامل داخل الكارنيه */}
+              <div className="text-[11px] font-black text-gray-700 truncate">{volunteer.unitName || "غير محدد"}</div>
             </div>
           </div>
         </div>
@@ -191,7 +202,6 @@ export default function Success() {
     if (data) {
       try { 
         const parsed = JSON.parse(data);
-        // تأمين الـ id كـ number ليتطابق مع الـ Interface المعتمد
         setVolunteer({ id: parsed.id || 0, ...parsed }); 
       }
       catch { 
@@ -231,19 +241,21 @@ export default function Success() {
               <p className="text-lg font-bold leading-relaxed mb-6">سيتم مراجعة طلبك وإصدار بطاقتك الرقمية الرسمية فور اعتماد البيانات من مكتب طوارئ جبل أولياء.</p>
               
               <div className="bg-white/80 backdrop-blur-sm border border-amber-200/50 rounded-3xl p-5 mt-4 flex flex-row-reverse items-center gap-5 shadow-inner">
-                <div className="w-24 h-24 rounded-2xl border-4 border-white shadow-md overflow-hidden shrink-0 bg-gray-50">
+                <div className="w-24 h-24 rounded-2xl border-4 border-white shadow-md overflow-hidden shrink-0 bg-white flex items-center justify-center">
                   {volunteer.photoUrl ? (
                     <img src={volunteer.photoUrl} className="w-full h-full object-cover" alt="Review Avatar" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                      <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    /* [تعديل] تظهر الحروف باللون العنابي الملكي هنا أيضاً في صندوق قيد الانتظار */
+                    <div className="w-full h-full bg-[#991b1b] text-white flex items-center justify-center font-black text-xl select-none">
+                      {getInitials(volunteer.fullName)}
                     </div>
                   )}
                 </div>
                 <div className="flex-1 text-right overflow-hidden">
                   <p className="text-[10px] text-amber-700 font-black uppercase tracking-widest mb-1 opacity-70">البيانات المرفوعة للمطابقة:</p>
                   <p className="text-lg font-black text-amber-950 truncate leading-tight">{volunteer.fullName}</p>
-                  <p className="text-sm font-bold text-amber-800 mt-2 bg-amber-100/50 px-3 py-1 rounded-full inline-block tracking-tight">الوحدة: {volunteer.unitName || "جبل أولياء"}</p>
+                  {/* [تعديل] هنا تظهر الوحدة الفعلية اللي اختارها في الاستمارة بدون فرض "جبل أولياء" */}
+                  <p className="text-sm font-bold text-amber-800 mt-2 bg-amber-100/50 px-3 py-1 rounded-full inline-block tracking-tight">الوحدة: {volunteer.unitName || "غير محدد"}</p>
                 </div>
               </div>
               <div className="bg-amber-100/40 p-4 rounded-2xl mt-6 border border-amber-200/30">

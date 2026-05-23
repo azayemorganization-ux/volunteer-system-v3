@@ -69,6 +69,19 @@ type FormValues = z.infer<typeof formSchema>;
 export default function Home() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+    useEffect(() => {
+    const wakeUpServer = async () => {
+      try {
+        await fetch('https://volunteer-system-v3.onrender.com');
+        console.log('📡 تم إرسال نغزة التصحية للسيرفر بنجاح.. جاري الاستيقاظ!');
+      } catch (error) {
+        console.log('Silent ping sent to server.');
+      }
+    };
+
+    wakeUpServer();
+  }, []);
+
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, ended: false });
   
   // المخزن الديناميكي للوحدات القادمة من قاعدة البيانات
@@ -139,7 +152,7 @@ export default function Home() {
   }, [toast]);
 
   useEffect(() => {
-    const targetDate = new Date("2026-05-30T23:59:59").getTime();
+    const targetDate = new Date("2026-06-30T23:59:59").getTime();
     const tick = () => {
       const now = Date.now();
       const distance = targetDate - now;
