@@ -75,7 +75,7 @@ export default function ProfilePage() {
           <div className="text-xs text-slate-600 bg-red-50/50 border border-red-100 p-4 rounded-2xl leading-relaxed font-bold">
             هذا المعرف الرقمي غير مدرج في قوائم الاعتماد النشطة حالياً.
             <br/> 
-            يرجى حجز الكارنيه وتوجيه الحامل لمراجعة مكتب تقنية معلومات طوارئ جبل أولياء.
+            يرجى حجز البطاقة وتوجيه الحامل لمراجعة مكتب تقنية معلومات مكتب طوارئ محلية جبل أولياء.
           </div>
         </Card>
       </div>

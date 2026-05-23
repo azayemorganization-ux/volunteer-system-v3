@@ -166,7 +166,7 @@ export default function AdminDashboard() {
               <span className="font-semibold">{admin.displayName || admin.username}</span>
               <span className="mx-2 text-muted-foreground">|</span>
               <span className={`text-xs font-mono px-2 py-0.5 rounded-full ${isSuperadmin ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                {isSuperadmin ? "مسؤول رئيسي" : "مشرف قطاع"}
+                {isSuperadmin ? "مسؤول رئيسي" : "مشرف"}
               </span>
             </div>
             <Button variant="outline" size="sm" onClick={handleLogout}>تسجيل الخروج</Button>
@@ -296,7 +296,7 @@ function ProfileDialog({ volunteer, open, onClose, isSuperadmin, onRefresh }: {
         credentials: "include" 
       });
       if (res.ok) {
-        toast({ title: "تم اعتماد المتطوع بنجاح وتوليد الرقم التعريفي" });
+        toast({ title: "تم اعتماد المتطوع بنجاح" });
         onRefresh();
         onClose();
       } else {
@@ -367,7 +367,7 @@ function ProfileDialog({ volunteer, open, onClose, isSuperadmin, onRefresh }: {
     ["وقت العودة", volunteer.expectedReturnTime || "—"],
     ["مدرب إسعافات", volunteer.isTotTrainer ? "نعم" : "لا"],
     ["سنة TOT", volunteer.totYear || "—"],
-    ["آخر منعش", volunteer.lastFirstAidRefresher || "—"],
+    ["آخر دورة تنشيطية", volunteer.lastFirstAidRefresher || "—"],
     ["برامج أخرى", volunteer.otherPrograms || "—"],
     ["تاريخ التسجيل", volunteer.createdAt ? new Date(volunteer.createdAt).toLocaleDateString("ar-EG") : "—"],
     ["تاريخ الاعتماد", volunteer.approvedAt ? new Date(volunteer.approvedAt).toLocaleDateString("ar-EG") : "—"],
@@ -591,7 +591,7 @@ function PendingTab({ isSuperadmin, role }: { isSuperadmin: boolean; role?: stri
           ) : !volunteers?.length ? (
             <div className="py-16 text-center text-muted-foreground">
               {isSuperadmin || role === "superadmin" ? "لا توجد أي طلبات معلقة حالياً في النظام" : 
-               role === "subadmin" ? "لا توجد أي طلبات معلقة حالياً في وحدتك الإدارية" : 
+               role === "subadmin" ? "لا توجد أي طلبات معلقة حالياً" : 
                "لا توجد أي طلبات معلقة حالياً في قطاعك"}
             </div>
           ) : (
@@ -739,7 +739,7 @@ function DirectoryTab({ isSuperadmin }: { isSuperadmin: boolean }) {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <CardTitle>دليل المتطوعين العام</CardTitle>
-              <CardDescription>عرض وتصفية وإدارة كافة السجلات المرفوعة على السيرفر</CardDescription>
+              <CardDescription>عرض كافة السجلات المرفوعة على النظام</CardDescription>
             </div>
             {isSuperadmin && (
               <div className="flex gap-2">
@@ -757,11 +757,11 @@ function DirectoryTab({ isSuperadmin }: { isSuperadmin: boolean }) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-3 mb-6">
-            <Input placeholder="البحث بالاسم السداسي أو الرقم الوطني..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="md:w-1/3" />
+            <Input placeholder="البحث بالاسم الرباعي أو الرقم الوطني..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="md:w-1/3" />
             <Select value={unitFilter} onValueChange={setUnitFilter}>
               <SelectTrigger className="md:w-1/4"><SelectValue placeholder="تصفية بالوحدة" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">جميع الوحدات الجغرافية</SelectItem>
+                <SelectItem value="all">جميع الوحدات</SelectItem>
                 {units?.map((u) => <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -790,7 +790,7 @@ function DirectoryTab({ isSuperadmin }: { isSuperadmin: boolean }) {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8">جاري جلب البيانات من السيرفر...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-8">جاري جلب البيانات من النظام...</TableCell></TableRow>
                 ) : !volunteers?.length ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">لا توجد سجلات مطابقة للفلاتر الحالية</TableCell></TableRow>
                 ) : (

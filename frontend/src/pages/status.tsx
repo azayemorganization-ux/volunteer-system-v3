@@ -76,7 +76,7 @@ export default function StatusCheck() {
           <div className="w-14 h-14 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-3 border border-primary/20">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">مراجعة حالة طلب الحصر</h1>
+          <h1 className="text-2xl font-bold tracking-tight">مراجعة حالة طلبك</h1>
           <p className="text-muted-foreground text-sm mt-1">أدخل رقمك الوطني للاستعلام الفوري عن حالة اعتماد بياناتك</p>
         </div>
 
@@ -111,7 +111,7 @@ export default function StatusCheck() {
             disabled={loading || !nationalId.trim()} 
             className="w-full h-12 text-base font-bold transition-all"
           >
-            {loading ? "جاري البحث في قاعدة البيانات..." : "استعلام عن الحالة الميدانية"}
+            {loading ? "جاري البحث ..." : "استعلام عن الطلب "}
           </Button>
         </div>
       </div>
@@ -124,7 +124,7 @@ export default function StatusCheck() {
           <div className={`rounded-xl border p-5 text-center shadow-sm ${isApproved ? "bg-green-50/70 border-green-200" : isRejected ? "bg-red-50/70 border-red-200" : "bg-amber-50/70 border-amber-200"}`}>
             <div className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-lg font-black mb-2 ${isApproved ? "bg-green-100 text-green-800" : isRejected ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}>
               {isApproved ? (
-                <><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>تم اعتماد البيانات بنجاح</>
+                <><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>تهانينا .. تم اعتمادك رسمياً</>
               ) : isRejected ? (
                 <><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>لم يتم الاعتماد (مرفوض)</>
               ) : (
@@ -136,7 +136,7 @@ export default function StatusCheck() {
                 ? `تم اعتماد وتوثيق طلبك برقم متطوع رسمي في تاريخ ${formatDate(result.approvedAt)}. بطاقتك الرقمية جاهزة للعرض والحفظ الآن.`
                 : isRejected
                 ? "تم رفض طلب الحصر الحالي لوجود نواقص في البيانات. يرجى مراجعة سبب الرفض الموضح أدناه."
-                : "طلبك قيد المراجعة والتدقيق اللوجستي الآن من قبل مكتب طوارئ جبل أولياء. يتم تحديث واعتماد الطلبات دورياً خلال 24 ساعة."}
+                : "طلبك قيد المراجعة والتدقيق الآن من قبل مكتب طوارئ جبل أولياء. يتم تحديث واعتماد الطلبات دورياً خلال 24 ساعة."}
             </p>
           </div>
 
@@ -172,7 +172,7 @@ export default function StatusCheck() {
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
               <div>
-                <div className="text-muted-foreground text-xs mb-0.5">الوحدة التطوعية الميدانية</div>
+                <div className="text-muted-foreground text-xs mb-0.5">اسم الوحدة</div>
                 <div className="font-bold text-foreground">{result.unitName || "مكتب طوارئ جبل أولياء"}</div>
               </div>
               <div>

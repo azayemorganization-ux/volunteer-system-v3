@@ -171,11 +171,11 @@ export function CardScreenshotPopup({ volunteer, open, onClose }: { volunteer: V
           </div>
           <div className="w-full bg-gradient-to-br from-red-950 to-black text-white p-5 rounded-[2rem] mt-6 shadow-xl border border-red-900/30">
             <div className="flex items-center gap-2 mb-2 border-b border-white/10 pb-2">
-              <p className="font-black text-sm tracking-tight">📸 خطوة هامة لحفظ الكارنيه</p>
+              <p className="font-black text-sm tracking-tight">📸 خطوة هامة لحفظ البطاقة</p>
             </div>
             <div className="text-[12px] font-bold text-red-100/90 leading-relaxed space-y-1.5 text-right">
               <p>• يرجى عمل لقطة شاشة (Screenshot) الآن لحفظ البطاقة على موبايلك.</p>
-              <p>• تأكد من ظهور كامل الكارنيه والـ QR بوضوح لإبرازها عند الطلب في الميدان.</p>
+              <p>• تأكد من ظهور كامل البطاقة والـ QR بوضوح لإبرازها عند الطلب  .</p>
             </div>
           </div>
           <Button variant="ghost" onClick={onClose} className="h-12 text-white/60 font-bold w-full hover:bg-white/5 mt-3 text-sm rounded-xl">إغلاق المعاينة</Button>
@@ -202,7 +202,7 @@ function ActionControlPanel({ volunteerId, whatsappMessage }: { volunteerId: str
       
       {/* تنبيه ذكي يوضح طبيعة الرقم المبدئية */}
       <div className="text-[11px] font-bold text-amber-800 bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl leading-relaxed">
-        ⚠️ <strong>تنويه هام:</strong> هذا الرقم يعتبر <strong>رقم متطوع مبدئي</strong>، وسيتم اعتماده وتفعيله رسمياً فور مراجعة البيانات وتأكيدها من قبل مكتب الإشراف.
+        ⚠️ <strong>تنويه هام:</strong> هذا الرقم يعتبر <strong>رقم متطوع مبدئي</strong>، وسيتم اعتماده رسمياً فور مراجعة البيانات وتأكيدها من قبل مكتب الإشراف.
       </div>
 
       <div className="flex items-center justify-between bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-100">
@@ -254,7 +254,7 @@ function InstitutionalStatusStepper({ volunteer }: { volunteer: VolunteerCardDat
           </div>
           <div>
             <h3 className="font-black text-[13px] text-white leading-tight">تأكيد استلام البيانات</h3>
-            <p className="text-[11px] text-emerald-300 font-bold mt-0.5">تم حفظ استمارة الحصر الرقمي بنجاح واطمئنان</p>
+            <p className="text-[11px] text-emerald-300 font-bold mt-0.5">تم حفظ استمارة الحصر الرقمي بنجاح </p>
           </div>
         </div>
 
@@ -294,7 +294,7 @@ function InstitutionalStatusStepper({ volunteer }: { volunteer: VolunteerCardDat
         </div>
         <div className="flex-1 text-right overflow-hidden">
           <p className="text-[14px] font-black text-white truncate leading-tight">{volunteer.fullName}</p>
-          <p className="text-[10px] font-bold text-red-300 mt-1">متطوع مسجل بالنظام الرقمي</p>
+          <p className="text-[10px] font-bold text-red-300 mt-1">تسجيل جديد في النظام الرقمي</p>
         </div>
       </div>
     </div>
@@ -365,7 +365,7 @@ export default function Success() {
           </>
         ) : (
           <>
-            <h1 className="text-xl font-black text-white tracking-tight">تم استلام بيانات الحصر بنجاح</h1>
+            <h1 className="text-xl font-black text-white tracking-tight">تم استلام تسجيل بياناتك بنجاح</h1>
             <p className="text-xs text-red-100/70 font-bold max-w-xs">جاري مراجعة طلبك الآن من قبل مشرفي مكتب الطوارئ.</p>
             
             <div className="w-full pt-2 flex justify-center">
