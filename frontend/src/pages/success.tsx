@@ -31,6 +31,14 @@ export function IDCard({ volunteer }: { volunteer: VolunteerCardData }) {
   const qrValue = `${currentOrigin}/profile/${volunteer.volunteerId}`; 
   const qrColor = "991b1b"; // اللون العنابي للهلال الأحمر
 
+  // [تعديل رفاهية] حالة وإجراء نسخ رقم القيد إلى الحافظة تلقائياً
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(volunteer.volunteerId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   // دالة تنسيق التاريخ الآمنة
   const formatCardDate = (dateString?: string | null) => {
     if (!dateString) return "معلق";
@@ -48,7 +56,7 @@ export function IDCard({ volunteer }: { volunteer: VolunteerCardData }) {
       dir="rtl"
       style={{ fontFamily: "'Cairo', sans-serif" }}
     >
-      {/* الخلفية والزخارف الهندسية */}
+      {/* الخلفية والزخارف الهندسية - بدون تعديل */}
       <div className="absolute inset-0 opacity-[0.05] pointer-events-none">
         <svg width="100%" height="100%">
           <pattern id="mesh-pattern" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
@@ -71,7 +79,7 @@ export function IDCard({ volunteer }: { volunteer: VolunteerCardData }) {
       <div className="absolute bottom-60 left-4 w-6 h-6 rounded-full border-2 border-red-50/40 opacity-70 pointer-events-none"></div>
       <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-red-800 via-red-600 to-red-800 shadow-md"></div>
 
-      {/* Tالترويسة والشعار الرسمي */}
+      {/* الترويسة والشعار الرسمي - بدون تعديل */}
       <div className="relative z-10 w-full mb-4 mt-4 flex flex-col items-center">
         <div className="w-16 h-16 mb-2 flex items-center justify-center">
           <svg viewBox="0 0 100 100" className="w-full h-full text-[#c10d28] drop-shadow-md" fill="currentColor">
@@ -89,7 +97,7 @@ export function IDCard({ volunteer }: { volunteer: VolunteerCardData }) {
         <div className="text-[11px] text-black font-black mt-0.5">مكتب طوارئ محلية جبل أولياء</div>
       </div>
 
-      {/* الصورة الشخصية بإطار الهوية */}
+      {/* الصورة الشخصية بإطار الهوية - [تعديل] تظهر الحروف باللون العنابي الملكي عند عدم رفع صورة */}
       <div className="relative z-10 mb-8 mt-2">
         <div className="absolute inset-0 bg-red-500/5 blur-[25px] rounded-full scale-110"></div>
         <div className="relative w-32 h-32 rounded-full border-[5px] border-white shadow-2xl p-0.5 bg-gradient-to-tr from-red-600 via-red-500 to-red-400 overflow-hidden mx-auto">
@@ -97,7 +105,6 @@ export function IDCard({ volunteer }: { volunteer: VolunteerCardData }) {
             {volunteer.photoUrl ? (
               <img src={volunteer.photoUrl} className="w-full h-full object-cover" alt="Volunteer Face" />
             ) : (
-              /* [تعديل] تظهر الحروف باللون العنابي الملكي عند عدم رفع صورة */
               <div className="w-full h-full bg-[#991b1b] text-white flex items-center justify-center font-black text-2xl tracking-wider select-none">
                 {getInitials(volunteer.fullName)}
               </div>
@@ -109,7 +116,7 @@ export function IDCard({ volunteer }: { volunteer: VolunteerCardData }) {
         </div>
       </div>
 
-      {/* صندوق البيانات المركزي */}
+      {/* صندوق البيانات المركزي - [تعديل] إضافة زر نسخ رقم القيد والديناميكية للوحدة */}
       <div className="relative z-10 w-full bg-white/95 backdrop-blur-md rounded-[2.5rem] border border-red-50 shadow-xl p-6 mb-4 overflow-hidden border-b-[4px] border-b-red-50/50">
         <div className="absolute -top-4 -right-4 w-16 h-16 bg-red-600/5 rounded-full"></div>
         
@@ -130,11 +137,21 @@ export function IDCard({ volunteer }: { volunteer: VolunteerCardData }) {
           <div className="grid grid-cols-1 gap-y-4 text-right flex-1">
             <div>
               <div className="text-[9px] text-gray-400 font-bold mb-0.5">رقم القيد المتطوع</div>
-              <div className="text-[11px] font-black text-red-600 font-mono tracking-tight">{volunteer.volunteerId}</div>
+              {/* زر نسخ رقم القيد السريع لراحة المتطوع */}
+              <div className="flex items-center gap-2 justify-end">
+                <div className="text-[11px] font-black text-red-600 font-mono tracking-tight">{volunteer.volunteerId}</div>
+                <button 
+                  onClick={handleCopy} 
+                  className="text-gray-400 hover:text-red-700 text-[10px] font-bold border border-gray-100 px-1.5 py-0.5 rounded-md bg-gray-50/50 active:scale-95 transition-all"
+                  title="نسخ رقم القيد"
+                >
+                  {copied ? "✓ تم" : "📋 نسخ"}
+                </button>
+              </div>
             </div>
             <div>
               <div className="text-[9px] text-gray-400 font-bold mb-0.5">الوحدة الميدانية</div>
-              {/* [تعديل] عرض الوحدة المعبأة في الاستمارة ديناميكياً بالكامل داخل الكارنيه */}
+              {/* عرض الوحدة الفعلية المختارة بديناميكية تامة */}
               <div className="text-[11px] font-black text-gray-700 truncate">{volunteer.unitName || "غير محدد"}</div>
             </div>
           </div>
@@ -164,7 +181,7 @@ export function IDCard({ volunteer }: { volunteer: VolunteerCardData }) {
   );
 }
 
-// 2. نافذة عرض ومعاينة البطاقة للحفظ (Popup Modal)
+// 2. نافذة عرض ومعاينة البطاقة للحفظ (Popup Modal) - بدون تعديل
 export function CardScreenshotPopup({ volunteer, open, onClose }: { volunteer: VolunteerCardData; open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -216,6 +233,10 @@ export default function Success() {
 
   const isApproved = volunteer.status === "approved";
 
+  // تحضير رسالة الدعوة والربط المخصص للواتساب ديناميكياً
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const whatsappMessage = `الحمد لله، قمت بتسجيل وتحديث بياناتي بنجاح في حصر مكتب طوارئ جبل أولياء لجمعية الهلال الأحمر السوداني. سارعوا بالتسجيل وتحديث بيانات الحصر الميداني عبر الرابط الرسمي التالي:\n${currentOrigin}`;
+
   return (
     <div className="min-h-screen bg-[#f8fafc] py-12 px-4 flex flex-col items-center justify-center space-y-8" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
       <div className="text-center space-y-4 max-w-xl w-full">
@@ -228,7 +249,12 @@ export default function Success() {
             <h1 className="text-3xl font-black text-gray-900 tracking-tight">تم الاعتماد بنجاح</h1>
             <p className="text-gray-500 font-medium">بطاقتكم الرقمية جاهزة ومسجلة في النظام للاستخدام الفوري.</p>
             <div className="pt-8">
-              <Button size="lg" onClick={() => setShowCard(true)} className="bg-red-600 hover:bg-red-700 text-white font-black h-16 px-12 rounded-[1.5rem] shadow-2xl transition-all hover:scale-105 text-xl w-full max-w-xs mx-auto">
+              {/* [تعديل رفاهية] إضافة أنيميشن النبض الهادئ لجذب الانتباه للزر الأساسي */}
+              <Button 
+                size="lg" 
+                onClick={() => setShowCard(true)} 
+                className="bg-red-600 hover:bg-red-700 text-white font-black h-16 px-12 rounded-[1.5rem] shadow-2xl transition-all hover:scale-105 text-xl w-full max-w-xs mx-auto block animate-[pulse_3s_infinite]"
+              >
                  عرض البطاقة الرقمية
               </Button>
             </div>
@@ -245,7 +271,7 @@ export default function Success() {
                   {volunteer.photoUrl ? (
                     <img src={volunteer.photoUrl} className="w-full h-full object-cover" alt="Review Avatar" />
                   ) : (
-                    /* [تعديل] تظهر الحروف باللون العنابي الملكي هنا أيضاً في صندوق قيد الانتظار */
+                    /* [تعديل] تظهر الحروف باللون العنابي الملكي هنا أيضاً في صندوق الانتظار */
                     <div className="w-full h-full bg-[#991b1b] text-white flex items-center justify-center font-black text-xl select-none">
                       {getInitials(volunteer.fullName)}
                     </div>
@@ -254,7 +280,7 @@ export default function Success() {
                 <div className="flex-1 text-right overflow-hidden">
                   <p className="text-[10px] text-amber-700 font-black uppercase tracking-widest mb-1 opacity-70">البيانات المرفوعة للمطابقة:</p>
                   <p className="text-lg font-black text-amber-950 truncate leading-tight">{volunteer.fullName}</p>
-                  {/* [تعديل] هنا تظهر الوحدة الفعلية اللي اختارها في الاستمارة بدون فرض "جبل أولياء" */}
+                  {/* [تعديل] تظهر هنا الوحدة المعبأة في الاستمارة ديناميكياً بالكامل */}
                   <p className="text-sm font-bold text-amber-800 mt-2 bg-amber-100/50 px-3 py-1 rounded-full inline-block tracking-tight">الوحدة: {volunteer.unitName || "غير محدد"}</p>
                 </div>
               </div>
@@ -262,9 +288,34 @@ export default function Success() {
                 <p className="text-sm font-black text-amber-800 leading-snug">يمكنك حفظ هذه الصفحة أو الرجوع في أي وقت عبر إدخال رقمك الوطني في صفحة "متابعة الحالة" للتحقق من صدور الكارنيه.</p>
               </div>
             </div>
+            
+            {/* صف الأزرار مع زر المشاركة الفاخر في الواتساب */}
             <div className="flex flex-wrap justify-center gap-4 pt-8 w-full">
-              <Button variant="outline" className="rounded-2xl px-8 h-14 font-black border-2 border-gray-200 text-gray-700 flex-1 max-w-[200px]" onClick={() => setLocation("/status")}>متابعة الحالة</Button>
-              <Button variant="ghost" className="rounded-2xl px-6 h-14 font-bold text-gray-400" onClick={() => setLocation("/")}>الرئيسية</Button>
+              <Button 
+                variant="outline" 
+                className="rounded-2xl px-8 h-14 font-black border-2 border-gray-200 text-gray-700 flex-1 min-w-[130px] max-w-[170px]" 
+                onClick={() => setLocation("/status")}
+              >
+                متابعة الحالة
+              </Button>
+              
+              {/* [تعديل رفاهية] زر النشر الفوري في جروبات الواتساب لاستقطاب باقي المتطوعين */}
+              <a 
+                href={`https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="bg-[#25D366] hover:bg-[#20ba5a] text-white font-black h-14 px-5 rounded-2xl flex items-center justify-center gap-2 text-[14px] shadow-lg transition-all hover:scale-105 flex-1 min-w-[160px] max-w-[210px] text-center"
+              >
+                <span>💬 انشر في الواتساب</span>
+              </a>
+
+              <Button 
+                variant="ghost" 
+                className="rounded-2xl px-4 h-14 font-bold text-gray-400" 
+                onClick={() => setLocation("/")}
+              >
+                الرئيسية
+              </Button>
             </div>
           </>
         )}
