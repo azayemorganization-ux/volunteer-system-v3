@@ -205,7 +205,6 @@ export default function Home() {
     reader.readAsDataURL(file);
   };
 
-  // معالجة مصفوفة التحويل لـ Canvas متطابقة بالبكسل مع الشاشة
   const handleApplyImageAdjustments = async () => {
     if (!imageElementRef.current || !rawImageSrc) return;
 
@@ -220,12 +219,9 @@ export default function Home() {
       ctx.fillRect(0, 0, 400, 400);
 
       ctx.save();
-      // 1. الانتقال لمنتصف الكانفاس الفعلي
       ctx.translate(200, 200);
-      // 2. تطبيق الزوم متطابقاً مع المعاينة
       ctx.scale(imageZoom, imageZoom);
       
-      // 3. تحويل الإحداثيات من ريندر الشاشة (صندوق الـ 160px) إلى حجم الكانفاس المعتمد (400px)
       const viewPortSize = 160;
       const scaleFactor = 400 / viewPortSize;
       ctx.translate(imagePanX * scaleFactor, imagePanY * scaleFactor);
@@ -236,14 +232,12 @@ export default function Home() {
       let dWidth = 400;
       let dHeight = 400;
       
-      // حسابات الـ Object Cover لتغطية المساحة بالكامل بدون تشويه
       if (imgRatio > 1) {
         dWidth = 400 * imgRatio;
       } else {
         dHeight = 400 / imgRatio;
       }
 
-      // رسم الصورة من المركز بالظبط
       ctx.drawImage(img, -dWidth / 2, -dHeight / 2, dWidth, dHeight);
       ctx.restore();
 
@@ -253,7 +247,7 @@ export default function Home() {
       try {
         const cloudinaryUrl = await uploadToCloudinary(croppedBase64);
         form.setValue("photoUrl", cloudinaryUrl, { shouldValidate: true });
-        setRawImageSrc(null); // إغلاق لوحة التعديل التفاعلية بنجاح
+        setRawImageSrc(null);
         toast({ title: "تم ضبط ومحاذاة الصورة", description: "تم حفظ الصورة بالشكل المتناسق سحابياً." });
       } catch (error) {
         toast({ variant: "destructive", title: "خطأ سحابي", description: "فشل حفظ الصورة المعدلة، يرجى المحاولة مجدداً." });
@@ -327,85 +321,93 @@ export default function Home() {
   const years = Array.from({ length: currentYear - 1970 + 1 }, (_, i) => currentYear - i);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
+    <div className="min-h-screen bg-slate-100 text-slate-900 pb-16 antialiased" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
+      
+      {/* الترحيب السحري المحسن */}
       {showWelcome && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
-          <div className="relative bg-white/5 backdrop-blur-3xl rounded-[3rem] max-w-lg w-full overflow-hidden shadow-2xl border border-white/10">
-            <div className="bg-gradient-to-br from-[#A31D22] via-[#C1272D] to-[#8B1519] p-10 text-center text-white border-b-8 border-yellow-500">
-              <div className="w-24 h-24 bg-white/10 rounded-full mx-auto mb-6 flex items-center justify-center backdrop-blur-lg border-4 border-white/20 shadow-xl">
-                 <span className="text-5xl">🇸🇩</span>
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="relative bg-white rounded-[2rem] max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200/60 transform animate-in zoom-in-95 duration-300">
+            <div className="bg-gradient-to-br from-[#A31D22] via-[#C1272D] to-[#8B1519] p-8 text-center text-white border-b-[6px] border-amber-500 relative">
+              <div className="absolute top-3 right-3 text-white/20 text-xs font-mono select-none">v3.0</div>
+              <div className="w-20 h-20 bg-white/10 rounded-full mx-auto mb-4 flex items-center justify-center backdrop-blur-md border-2 border-white/20 shadow-lg transition-transform hover:scale-105 duration-300">
+                 <span className="text-4xl">🇸🇩</span>
               </div>
-              <h2 className="text-3xl font-black mb-2 tracking-tighter">فخر جبل أولياء</h2>
-              <p className="text-[11px] text-yellow-400 font-bold tracking-[0.3em] uppercase opacity-80">Digital Pioneer in Sudan</p>
+              <h2 className="text-2xl font-black mb-1 tracking-tight">فخر جبل أولياء</h2>
+              <p className="text-[10px] text-amber-400 font-bold tracking-widest uppercase opacity-90">Digital Pioneer in Sudan</p>
             </div>
-            <div className="p-10 text-center space-y-6">
-              <p className="text-white text-xl font-bold leading-relaxed">
-                مرحباً بك في <span className="text-yellow-400 italic">المنصة الرقمية الأولى</span> لحصر متطوعي الهلال الأحمر السوداني على مستوى السودان.
+            <div className="p-8 text-center space-y-5 bg-gradient-to-b from-white to-slate-50">
+              <p className="text-slate-800 text-lg font-bold leading-relaxed">
+                مرحباً بك في <span className="text-[#C1272D] underline decoration-amber-500 decoration-2 underline-offset-4">المنصة الرقمية الأولى</span> لحصر متطوعي الهلال الأحمر السوداني.
               </p>
-              <p className="text-sm text-white/80 leading-loose font-medium">
-                هذا التطور التاريخي انطلق من محلية جبل أولياء، بسواعدكم نصنع مستقبلاً رقمياً جديداً لجمعية الهلال الأحمر السوداني.
+              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                هذا التطور التاريخي انطلق من محلية جبل أولياء، وبسواعدكم وخبراتكم نصنع مستقبلاً رقمياً جديداً لجمعيتنا العريقة بمواصفات عالمية.
               </p>
               <button 
                 type="button"
                 onClick={handleDismissWelcome}
-                className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-[#630D11] font-black py-5 rounded-3xl shadow-2xl transition-all transform active:scale-95 flex items-center justify-center gap-3 group"
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-amber-500/20 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 group text-base"
               >
-                فخور بالانضمام .. ابدأ الآن
-                <span className="text-2xl group-hover:translate-x-[-8px] transition-transform">←</span>
+                <span>فخور بالانضمام .. ابدأ الآن</span>
+                <span className="text-xl group-hover:translate-x-[-4px] transition-transform">←</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="relative bg-gradient-to-r from-[#A31D22] via-[#C1272D] to-[#A31D22] text-white overflow-hidden py-8 px-4 border-b-4 border-yellow-500/20 shadow-xl">
-        <div className="container max-w-6xl mx-auto relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+      {/* الهيدر الاحترافي الفخم */}
+      <div className="relative bg-gradient-to-br from-[#8B1519] via-[#C1272D] to-[#A31D22] text-white overflow-hidden pt-10 pb-8 px-4 border-b-4 border-amber-500 shadow-xl">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_50%)]"></div>
+        <div className="container max-w-4xl mx-auto relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="text-center md:text-right space-y-3 flex-1">
-            <div className="inline-block px-3 py-0.5 bg-white/10 backdrop-blur-md rounded-full text-[10px] border border-white/5 opacity-80 mb-1">
+            <div className="inline-flex px-3 py-1 bg-black/15 backdrop-blur-md rounded-full text-[10px] border border-white/10 font-bold opacity-90 tracking-wide mb-1">
               بِسمِ اللَّهِ الرَّحمَنِ الرَّحِيمِ
             </div>
-            <div className="space-y-0">
+            <div className="space-y-1">
               <h1 className="text-2xl md:text-3xl font-black tracking-tight drop-shadow-md leading-tight">
                 جمعية الهلال الأحمر السوداني
               </h1>
-              <p className="text-xs md:text-sm font-bold text-yellow-400 opacity-90">
+              <p className="text-xs md:text-sm font-bold text-amber-400 tracking-wide">
                 فرع ولاية الخرطوم — مكتب طوارئ محلية جبل أولياء
               </p>
             </div>
-            <div className="relative inline-flex flex-col items-center md:items-start group">
-              <h4 className="text-lg md:text-xl font-black bg-white/5 px-4 py-2 rounded-xl border-r-4 border-yellow-500 shadow-inner">
-                المنصة الرقمية لحصر المتطوعين
-              </h4>
-              <span className="text-[9px] font-mono tracking-widest text-white/50 mt-1 uppercase">
-                Digital Platform for Volunteers
-              </span>
+            <div className="pt-1">
+              <div className="relative inline-flex flex-col items-center md:items-start bg-black/10 px-4 py-2 rounded-2xl border-r-4 border-amber-500 backdrop-blur-sm">
+                <h4 className="text-base md:text-lg font-black tracking-tight">
+                  المنصة الرقمية لحصر وتوثيق المتطوعين
+                </h4>
+                <span className="text-[8px] font-mono tracking-widest text-white/40 uppercase mt-0.5">
+                  Digital Platform for Volunteers
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="bg-black/20 backdrop-blur-xl p-4 md:p-6 rounded-[2.5rem] border border-white/10 shadow-2xl min-w-[300px]">
-            <div className="flex items-center justify-between mb-4 px-2">
-              <span className="text-[10px] font-bold text-yellow-500 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-ping"></span>
-                ينتهي الحصر: 30 يونيو 2026
+          {/* العداد بتأثير زجاجي فخم */}
+          <div className="bg-white/10 backdrop-blur-md p-5 rounded-[2rem] border border-white/15 shadow-2xl min-w-[290px] relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <span className="text-[10px] font-bold text-amber-400 flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
+                ينتهي الحصر الميداني: 30 يونيو 2026
               </span>
-              <span className="text-[9px] opacity-50 font-mono uppercase tracking-tighter">Countdown</span>
+              <span className="text-[8px] opacity-40 font-mono tracking-wider uppercase">Timer</span>
             </div>
-            <div className="flex justify-center items-center gap-3">
+            <div className="flex justify-center items-center gap-2.5">
               {[
                 { label: "يوم", value: timeLeft.days, primary: true },
                 { label: "ساعة", value: timeLeft.hours },
                 { label: "دقيقة", value: timeLeft.minutes },
                 { label: "ثانية", value: timeLeft.seconds },
               ].map((item, i) => (
-                <div key={i} className="flex flex-col items-center">
+                <div key={i} className="flex flex-col items-center flex-1">
                   <div className={`
-                    ${item.primary ? 'w-14 h-14 md:w-16 md:h-16 bg-white text-[#C1272D] shadow-yellow-500/20' : 'w-10 h-10 md:w-12 md:h-12 bg-white/10 text-white'}
-                    rounded-2xl flex items-center justify-center font-black text-lg md:text-xl shadow-lg border border-white/10 relative overflow-hidden
+                    w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center font-black text-base md:text-lg relative overflow-hidden transition-all shadow-md
+                    ${item.primary ? 'bg-amber-500 text-white font-black' : 'bg-white text-slate-900'}
                   `}>
-                    {item.primary && <div className="absolute bottom-0 left-0 w-full h-1 bg-yellow-500"></div>}
                     {item.value}
                   </div>
-                  <span className={`text-[9px] mt-1 font-bold ${item.primary ? 'text-white' : 'opacity-60'}`}>{item.label}</span>
+                  <span className={`text-[9px] mt-1 font-bold ${item.primary ? 'text-amber-300' : 'text-white/70'}`}>{item.label}</span>
                 </div>
               ))}
             </div>
@@ -413,318 +415,423 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 🚀 تم إرجاع صف الأزرار كاملاً وبداخله زر دخول الإدارة المفقود بنجاح */}
-      <div className="container max-w-3xl mx-auto px-4 pt-5 flex items-center justify-between gap-3">
-        <Button variant="ghost" size="sm" onClick={() => setLocation("/admin")} className="text-slate-400 hover:text-red-700 font-bold text-xs transition-colors">
-          🔐 دخول الإدارة
+      {/* شريط التحكم السريع الحليق */}
+      <div className="container max-w-3xl mx-auto px-4 pt-6 flex items-center justify-between gap-4">
+        <Button variant="ghost" size="sm" onClick={() => setLocation("/admin")} className="text-slate-500 hover:text-[#C1272D] hover:bg-slate-200/50 font-bold text-xs rounded-xl px-3 transition-all">
+          🔐 بوابة الإدارة المركزية
         </Button>
-        <Button variant="outline" size="sm" onClick={() => setLocation("/status")} className="border-red-600/30 text-red-700 hover:bg-red-50 font-bold">
-          مراجعة حالة الطلب
+        <Button variant="outline" size="sm" onClick={() => setLocation("/status")} className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-[#C1272D] font-bold text-xs rounded-xl px-4 py-2 shadow-sm transition-all">
+          🔍 مراجعة الطلبات السابقة
         </Button>
       </div>
 
-      <div className="container max-w-3xl mx-auto px-4 mt-3">
-        <div className="bg-white text-slate-900 rounded-2xl shadow-xl border p-6 md:p-8">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      {/* موديول الاستمارة الرئيسي الفاخر */}
+      <div className="container max-w-3xl mx-auto px-4 mt-4">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            
+            {/* 1. كارت البيانات الأساسية */}
+            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 border-r-[5px] border-r-[#C1272D] transition-all hover:shadow-md duration-300 group">
+              <div className="flex items-center gap-2 pb-4 mb-6 border-b border-slate-100">
+                <span className="text-xl">📋</span>
+                <h3 className="text-lg font-black text-slate-900 group-hover:text-[#C1272D] transition-colors">البيانات الأساسية للمتطوع</h3>
+              </div>
               
-              {/* البيانات الأساسية */}
-              <section className="space-y-6">
-                <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">البيانات الأساسية</h3></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField control={form.control} name="fullName" render={({ field }) => (
-                    <FormItem><FormLabel>الاسم الرباعي كاملاً <span className="text-destructive">*</span></FormLabel><FormControl><Input placeholder="أدخل الاسم الرباعي كاملاً كما بالوثائق" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="nationalId" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>الرقم الوطني <span className="text-destructive">*</span></FormLabel>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <FormField control={form.control} name="fullName" render={({ field }) => (
+                  <FormItem className="focus-within:translate-x-[-2px] transition-transform duration-200">
+                    <FormLabel className="text-xs font-bold text-slate-700">الاسم الرباعي كاملاً <span className="text-[#C1272D]">*</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="أدخل اسمك الرباعي متطابقاً مع الوثائق الرسمية" className="rounded-xl border-slate-200 bg-slate-50/50 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#C1272D]/10 focus-visible:border-[#C1272D] h-11 text-sm font-medium transition-all" {...field} />
+                    </FormControl>
+                    <FormMessage className="text-xs font-bold" />
+                  </FormItem>
+                )} />
+                
+                <FormField control={form.control} name="nationalId" render={({ field }) => (
+                  <FormItem className="focus-within:translate-x-[-2px] transition-transform duration-200">
+                    <FormLabel className="text-xs font-bold text-slate-700">الرقم الوطني <span className="text-[#C1272D]">*</span></FormLabel>
+                    <FormControl>
+                      <Input type="text" inputMode="numeric" placeholder="11xxxxxxxxxxx" dir="ltr" className="text-right rounded-xl border-slate-200 bg-slate-50/50 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#C1272D]/10 focus-visible:border-[#C1272D] h-11 text-sm font-semibold transition-all" {...field} onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))} />
+                    </FormControl>
+                    <FormMessage className="text-xs font-bold" />
+                  </FormItem>
+                )} />
+                
+                <FormField control={form.control} name="phone" render={({ field }) => (
+                  <FormItem className="focus-within:translate-x-[-2px] transition-transform duration-200">
+                    <FormLabel className="text-xs font-bold text-slate-700">رقم الهاتف النشط حالياً <span className="text-[#C1272D]">*</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="09xxxxxxxx" dir="ltr" className="text-right rounded-xl border-slate-200 bg-slate-50/50 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#C1272D]/10 focus-visible:border-[#C1272D] h-11 text-sm font-semibold transition-all" {...field} onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))} />
+                    </FormControl>
+                    <FormMessage className="text-xs font-bold" />
+                  </FormItem>
+                )} />
+                
+                <FormField control={form.control} name="whatsapp" render={({ field }) => (
+                  <FormItem className="focus-within:translate-x-[-2px] transition-transform duration-200">
+                    <FormLabel className="text-xs font-bold text-slate-600">رقم الواتساب المباشر <span className="text-slate-400 font-normal">(اختياري)</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="09xxxxxxxx" dir="ltr" className="text-right rounded-xl border-slate-200 bg-slate-50/50 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#C1272D]/10 focus-visible:border-[#C1272D] h-11 text-sm font-semibold transition-all" {...field} onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))} />
+                    </FormControl>
+                    <FormMessage className="text-xs font-bold" />
+                  </FormItem>
+                )} />
+                
+                <FormField control={form.control} name="yearOfVolunteering" render={({ field }) => (
+                  <FormItem className="col-span-1 md:col-span-2 focus-within:translate-x-[-2px] transition-transform duration-200">
+                    <FormLabel className="text-xs font-bold text-slate-700">تاريخ بدء العمل التطوعي الفعلي بالجمعية <span className="text-[#C1272D]">*</span></FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <Input type="text" inputMode="numeric" placeholder="أدخل الأرقام الوطنية فقط" dir="ltr" className="text-right" {...field} onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))} />
+                        <SelectTrigger className="rounded-xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-[#C1272D]/10 focus:border-[#C1272D] h-11 text-sm font-medium transition-all">
+                          <SelectValue placeholder="اضغط لاختيار سنة الالتحاق الرسمية" />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="phone" render={({ field }) => (
-                    <FormItem><FormLabel>رقم الهاتف الحالي <span className="text-destructive">*</span></FormLabel><FormControl><Input placeholder="09xxxxxxxx" dir="ltr" className="text-right" {...field} onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="whatsapp" render={({ field }) => (
-                    <FormItem><FormLabel>رقم الواتساب (اختياري)</FormLabel><FormControl><Input placeholder="09xxxxxxxx" dir="ltr" className="text-right" {...field} onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="yearOfVolunteering" render={({ field }) => (
-                    <FormItem><FormLabel>في أي سنة بدأت التطوع مع الهلال الأحمر؟ <span className="text-destructive">*</span></FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="اختر سنة الانضمام" /></SelectTrigger></FormControl>
-                        <SelectContent className="max-h-[250px] overflow-y-auto">{years.map((y) => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
-                      </Select><FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
-              </section>
+                      <SelectContent className="max-h-[240px] overflow-y-auto rounded-xl shadow-xl">{years.map((y) => <SelectItem key={y} value={y.toString()} className="font-medium">{y}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <FormMessage className="text-xs font-bold" />
+                  </FormItem>
+                )} />
+              </div>
+            </section>
 
-              {/* الصورة الشخصية مع معالجة وضبط الفروقات البكسلية بدقة */}
-              <section className="space-y-4">
-                <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">الصورة الشخصية للبطاقة</h3></div>
-                <FormField control={form.control} name="photoUrl" render={({ field: { value: _v, ...field } }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">إرفاق صورة شخصية حديثة <span className="text-[11px] font-normal text-muted-foreground">(اختياري)</span></FormLabel>
-                    
-                    <div className="flex flex-col gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                      <div className="flex items-center gap-5">
-                        <div className="w-24 h-24 rounded-full border-2 border-red-600 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
-                          {photoPreview ? (
-                            <img src={photoPreview} alt="الصورة النهائية" className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-[10px] text-gray-400 text-center p-1">لا توجد صورة معتمدة</span>
-                          )}
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <FormControl>
-                            <input {...field} ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} value="" />
-                          </FormControl>
-                          <Button type="button" variant="outline" size="sm" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => photoInputRef.current?.click()}>
-                            {photoPreview ? "تغيير الصورة الحالية" : "اختيار صورة من الموبايل"}
-                          </Button>
-                          <p className="text-[11px] leading-relaxed text-amber-800 bg-amber-500/10 border border-amber-200 rounded-lg px-3 py-1.5">
-                            💡 <strong>إرشادات مهمة:</strong> يرجى جعل ملامح وجهك واضحة وفي منتصف الإطار تماماً ليظهر الكارنيه بشكل رسمي فخم.
-                          </p>
+            {/* 2. كارت الصورة الشخصية الاحترافي */}
+            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 border-r-[5px] border-r-amber-500 transition-all hover:shadow-md duration-300">
+              <div className="flex items-center gap-2 pb-4 mb-6 border-b border-slate-100">
+                <span className="text-xl">📸</span>
+                <h3 className="text-lg font-black text-slate-900">الصورة الشخصية الرسمية للبطاقة</h3>
+              </div>
+              
+              <FormField control={form.control} name="photoUrl" render={({ field: { value: _v, ...field } }) => (
+                <FormItem>
+                  <div className="flex flex-col gap-5 bg-slate-50 p-5 rounded-2xl border border-slate-200/70">
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                      <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-slate-300 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-inner group relative">
+                        {photoPreview ? (
+                          <img src={photoPreview} alt="المعاينة" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                        ) : (
+                          <div className="text-center p-2 space-y-1">
+                            <span className="block text-xl opacity-40">👤</span>
+                            <span className="text-[9px] text-slate-400 font-bold block">لا توجد صورة</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-3 flex-1 w-full text-center sm:text-right">
+                        <FormControl>
+                          <input { ...field } ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} value="" />
+                        </FormControl>
+                        <Button type="button" variant="outline" size="sm" className="border-slate-200 bg-white text-slate-700 hover:bg-[#C1272D]/5 hover:text-[#C1272D] font-bold rounded-xl px-4 py-2 transition-all shadow-sm" onClick={() => photoInputRef.current?.click()}>
+                          {photoPreview ? "🔄 استبدال وتغيير الصورة" : "📁 اختيار صورة من الاستوديو"}
+                        </Button>
+                        <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3 text-[11px] leading-relaxed text-amber-900 font-medium shadow-inner-sm">
+                          💡 <strong>توجيه فني:</strong> يفضل رفع صورة ذات خلفية سادة وواضحة المعالم، وسيساعدك المحرر المدمج أدناه على موازنتها وتوسيطها بدقة عالية لتخرج بطاقتك بأبهى مظهر.
                         </div>
                       </div>
-
-                      {/* لوحة التحكم والضبط الحيوي المتطابقة مع الكانفاس برمجياً */}
-                      {rawImageSrc && (
-                        <div className="border-t pt-4 mt-2 space-y-4 bg-white p-4 rounded-xl border-dashed border-slate-300 animate-in zoom-in-95">
-                          <p className="text-xs font-black text-slate-800 flex items-center gap-1">⚙️ لوحة ضبط وتوسيط الصورة الشخصية</p>
-                          
-                          <div className="flex flex-col items-center justify-center gap-4 md:flex-row">
-                            {/* نافذة المعاينة المحددة بـ 160px لضبط الحسابات الرياضية بدقة */}
-                            <div className="w-40 h-40 rounded-full border-4 border-emerald-500 overflow-hidden relative bg-slate-100 shrink-0 shadow-md">
-                              <img 
-                                ref={imageElementRef}
-                                src={rawImageSrc} 
-                                alt="تحريك حي" 
-                                className="w-full h-full object-cover origin-center"
-                                style={{
-                                  transform: `scale(${imageZoom}) translate(${imagePanX}px, ${imagePanY}px)`,
-                                  transition: "none"
-                                }}
-                              />
-                            </div>
-
-                            <div className="w-full flex-1 space-y-3 text-xs">
-                              <div className="space-y-1">
-                                <div className="flex justify-between font-bold text-slate-600"><span>🔍 حجم وتكبير الصورة:</span><span>{imageZoom.toFixed(1)}x</span></div>
-                                <input type="range" min="1" max="4" step="0.1" value={imageZoom} onChange={(e) => setImageZoom(parseFloat(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-red-600" />
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex justify-between font-bold text-slate-600"><span>↔️ تحريك يمين / يسار:</span><span>{imagePanX}px</span></div>
-                                <input type="range" min="-80" max="80" step="1" value={imagePanX} onChange={(e) => setImagePanX(parseInt(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-700" />
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex justify-between font-bold text-slate-600"><span>↕️ تحريك أعلى / أسفل:</span><span>{imagePanY}px</span></div>
-                                <input type="range" min="-80" max="80" step="1" value={imagePanY} onChange={(e) => setImagePanY(parseInt(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-700" />
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex justify-end gap-2 pt-2">
-                            <Button type="button" variant="ghost" size="sm" className="text-xs text-slate-500" onClick={() => setRawImageSrc(null)}>إلغاء</Button>
-                            <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold" onClick={handleApplyImageAdjustments} disabled={isUploadingPhoto}>
-                              {isUploadingPhoto ? "جاري المعالجة والرفع..." : "✅ اعتماد الصورة الموزونة"}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
                     </div>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </section>
 
-              {/* حقل الوحدة الإدارية المحدث */}
-              <section className="space-y-4">
-                <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">الوحدة التطوعية المحلية</h3></div>
-                <FormField control={form.control} name="unitId" render={({ field }) => (
-                  <FormItem><FormLabel>تتبع لأي وحدة بمحلية جبل أولياء؟ <span className="text-destructive">*</span></FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value ? field.value.toString() : ""}>
-                      <FormControl><SelectTrigger><SelectValue placeholder={isLoadingUnits ? "جاري تحميل الوحدات..." : "اختر الوحدة الإدارية التي تنتمي إليها"} /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {dbUnits.length > 0 ? (
-                          dbUnits.map((u) => (
-                            <SelectItem key={u.id} value={u.id.toString()}>{u.name} {u.sector ? `(${u.sector})` : ""}</SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="0" disabled>لا توجد وحدات متوفرة حالياً</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select><FormMessage />
-                  </FormItem>
-                )} />
-              </section>
+                    {/* ستوديو تعديل ومعاينة الحقول البكسلية الحي */}
+                    {rawImageSrc && (
+                      <div className="border border-slate-200 bg-white p-5 rounded-xl border-dashed mt-2 space-y-5 animate-in zoom-in-95 duration-200 shadow-sm">
+                        <p className="text-xs font-black text-slate-800 flex items-center gap-1.5 border-b pb-2 text-[#C1272D]">⚙️ محرر موازنة وتثبيت أبعاد الصورة</p>
+                        
+                        <div className="flex flex-col items-center justify-center gap-6 md:flex-row">
+                          <div className="w-40 h-40 rounded-full border-[4px] border-emerald-500 overflow-hidden relative bg-slate-100 shrink-0 shadow-lg ring-4 ring-emerald-500/10">
+                            <img 
+                              ref={imageElementRef}
+                              src={rawImageSrc} 
+                              alt="محرر المحاذاة" 
+                              className="w-full h-full object-cover origin-center"
+                              style={{
+                                transform: `scale(${imageZoom}) translate(${imagePanX}px, ${imagePanY}px)`,
+                                transition: "none"
+                              }}
+                            />
+                          </div>
 
-              {/* قسم التدريب المعتمد */}
-              <section className="space-y-6">
-                <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">السجل التدريبي المعتمد (TOT)</h3></div>
-                <FormField control={form.control} name="isTotTrainer" render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel>هل أنت مدرب إسعافات أولية معتمد بالجمعية؟ <span className="text-destructive">*</span></FormLabel>
-                    <FormControl>
-                      <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-row gap-6">
-                        <div className="flex items-center gap-2"><RadioGroupItem value="true" /><FormLabel className="cursor-pointer">نعم، مدرب معتمد</FormLabel></div>
-                        <div className="flex items-center gap-2"><RadioGroupItem value="false" /><FormLabel className="cursor-pointer">لا</FormLabel></div>
-                      </RadioGroup>
-                    </FormControl>
-                  </FormItem>
-                )} />
-
-                {isTotTrainer === "true" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-red-50/20 p-5 rounded-2xl border border-red-100 animate-in slide-in-from-top-2">
-                    <FormField control={form.control} name="totCertificateUrl" render={({ field: { value: _v, ...field } }) => (
-                      <FormItem className="col-span-1 md:col-span-2 border-dashed border-2 border-slate-200 p-4 rounded-xl bg-white">
-                        <FormLabel className="text-slate-600 font-bold">إرفاق شهادة مدرب إسعافات أولية (TOT)</FormLabel>
-                        <FormControl><input type="file" ref={totCertInputRef} className="hidden" accept="image/*,.pdf" onChange={handleTotCertUpload} disabled={isUploadingTot} /></FormControl>
-                        <div className="flex items-center gap-3 mt-2">
-                          <Button type="button" variant="outline" size="sm" onClick={() => totCertInputRef.current?.click()} disabled={isUploadingTot}>رفع الشهادة</Button>
-                          {isUploadingTot && <span className="text-xs text-amber-600 font-bold animate-pulse">⏳ جاري الحفظ سحابياً...</span>}
-                          {totCertPreview && !isUploadingTot && <span className="text-xs text-green-700 font-bold">✅ تم الرفع بنجاح</span>}
+                          <div className="w-full flex-1 space-y-4 text-xs">
+                            <div className="space-y-1.5">
+                              <div className="flex justify-between font-bold text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md"><span>🔍 نسبة الزوم والتكبير:</span><span className="font-mono text-[#C1272D]">{imageZoom.toFixed(1)}x</span></div>
+                              <input type="range" min="1" max="4" step="0.1" value={imageZoom} onChange={(e) => setImageZoom(parseFloat(e.target.value))} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#C1272D]" />
+                            </div>
+                            <div className="space-y-1.5">
+                              <div className="flex justify-between font-bold text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md"><span>↔️ المحاذاة الأفقية (يمين/يسار):</span><span className="font-mono text-slate-700">{imagePanX}px</span></div>
+                              <input type="range" min="-80" max="80" step="1" value={imagePanX} onChange={(e) => setImagePanX(parseInt(e.target.value))} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-700" />
+                            </div>
+                            <div className="space-y-1.5">
+                              <div className="flex justify-between font-bold text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md"><span>↕️ المحاذاة العمودية (أعلى/أسفل):</span><span className="font-mono text-slate-700">{imagePanY}px</span></div>
+                              <input type="range" min="-80" max="80" step="1" value={imagePanY} onChange={(e) => setImagePanY(parseInt(e.target.value))} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-700" />
+                            </div>
+                          </div>
                         </div>
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="totYear" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>سنة الحصول على اعتماد الـ TOT</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="اختر السنة" /></SelectTrigger></FormControl>
-                          <SelectContent className="max-h-[200px] overflow-y-auto">{years.map((y) => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="lastFirstAidRefresher" render={({ field }) => (
-                      <FormItem><FormLabel>تاريخ آخر دورة تنشيطية/إنعاشية</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem>
-                    )} />
-                    
-                    <FormField control={form.control} name="otherPrograms" render={({ field }) => (
-                        <FormItem className="col-span-1 md:col-span-2 pt-2 border-t mt-2">
-                          <FormLabel className="font-bold text-red-700">هل أنت مدرب معتمد في برامج تخصصية أخرى؟</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="اختر البرنامج الإضافي إن وجد" /></SelectTrigger></FormControl>
-                            <SelectContent>{OTHER_PROGRAMS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-                          </Select>
-                        </FormItem>
-                    )} />
 
-                    {otherPrograms && otherPrograms !== "لا" && (
-                      <FormField control={form.control} name="otherCertificateUrl" render={({ field: { value: _v, ...field } }) => (
-                          <FormItem className="col-span-1 md:col-span-2 bg-red-50/30 p-4 rounded-xl border-2 border-dashed border-red-200 animate-in zoom-in-95 shadow-sm">
-                            <FormLabel className="text-red-800 font-bold flex items-center gap-2 text-sm">رفع شهادة تخصص لبرنامج ({otherPrograms}) <span className="text-destructive">*</span></FormLabel>
-                            <FormControl>
-                              <div className="space-y-2">
-                                <input type="file" ref={otherCertInputRef} className="hidden" accept="image/*,.pdf" onChange={handleOtherCertUpload} disabled={isUploadingOther} />
-                                <div className="flex items-center gap-3 mt-2">
-                                  <Button type="button" variant="outline" size="sm" onClick={() => otherCertInputRef.current?.click()} className="border-red-200 text-red-700" disabled={isUploadingOther}>اختيار الملف</Button>
-                                  {isUploadingOther && <span className="text-xs text-amber-600 font-bold animate-pulse">⏳ جاري الحفظ...</span>}
-                                  {otherCertPreview && !isUploadingOther && <span className="text-xs text-green-700 font-bold">✅ جاهز للرفع للفرع الرئيسي</span>}
-                                </div>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                      )} />
+                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                          <Button type="button" variant="ghost" size="sm" className="text-xs text-slate-400 hover:bg-slate-50 font-bold rounded-lg" onClick={() => setRawImageSrc(null)}>إلغاء الأمر</Button>
+                          <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-lg px-4 shadow-md shadow-emerald-600/10 transition-all" onClick={handleApplyImageAdjustments} disabled={isUploadingPhoto}>
+                            {isUploadingPhoto ? "🔄 جاري معالجة الكانفاس الحية..." : "✅ اعتماد الصورة وتثبيتها"}
+                          </Button>
+                        </div>
+                      </div>
                     )}
                   </div>
-                )}
-              </section>
+                  <FormMessage className="text-xs font-bold" />
+                </FormItem>
+              )} />
+            </section>
 
-              {/* الموقع والتوافر */}
-              <section className="space-y-6">
-                <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">الوضع الميداني والتوافر الحركي</h3></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField control={form.control} name="currentStatusInKhartoum" render={({ field }) => (
-                    <FormItem><FormLabel>الوضع الجغرافي الحالي بالخرطوم <span className="text-destructive">*</span></FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="اختر وضعك الحالي" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="موجود حالياً">موجود حالياً داخل الولاية</SelectItem>
-                          <SelectItem value="خارج الخرطوم">نزوح/تواجد خارج الولاية</SelectItem>
-                          <SelectItem value="مسافر خارج البلاد">خارج السودان حالياً</SelectItem>
-                        </SelectContent>
-                      </Select><FormMessage />
+            {/* 3. كارت الوحدة الإدارية المحلية */}
+            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 border-r-[5px] border-r-emerald-600 transition-all hover:shadow-md duration-300">
+              <div className="flex items-center gap-2 pb-4 mb-6 border-b border-slate-100">
+                <span className="text-xl">📍</span>
+                <h3 className="text-lg font-black text-slate-900">التبعية الإدارية والميدانية</h3>
+              </div>
+              
+              <FormField control={form.control} name="unitId" render={({ field }) => (
+                <FormItem className="focus-within:translate-x-[-2px] transition-transform duration-200">
+                  <FormLabel className="text-xs font-bold text-slate-700">الوحدة التنظيمية التابع لها بمحلية جبل أولياء <span className="text-[#C1272D]">*</span></FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value ? field.value.toString() : ""}>
+                    <FormControl>
+                      <SelectTrigger className="rounded-xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-600 h-11 text-sm font-medium transition-all">
+                        <SelectValue placeholder={isLoadingUnits ? "⏳ جاري استدعاء الوحدات من الخادم..." : "اضغط للاختيار من قائمة الوحدات المفعلة"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="rounded-xl shadow-xl">
+                      {dbUnits.length > 0 ? (
+                        dbUnits.map((u) => (
+                          <SelectItem key={u.id} value={u.id.toString()} className="font-medium">{u.name} {u.sector ? `(${u.sector})` : ""}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="0" disabled>لا توجد وحدات متوفرة حالياً</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-xs font-bold" />
+                </FormItem>
+              )} />
+            </section>
+
+            {/* 4. كارت السجل التدريبي المعتمد (TOT) */}
+            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 border-r-[5px] border-r-indigo-600 transition-all hover:shadow-md duration-300">
+              <div className="flex items-center gap-2 pb-4 mb-6 border-b border-slate-100">
+                <span className="text-xl">🎓</span>
+                <h3 className="text-lg font-black text-slate-900">الكفاءة الفنية والسجل التدريبي</h3>
+              </div>
+              
+              <FormField control={form.control} name="isTotTrainer" render={({ field }) => (
+                <FormItem className="space-y-4">
+                  <FormLabel className="text-xs font-bold text-slate-700">هل أنت مدرب إسعافات أولية معتمد (TOT) بالجمعية؟ <span className="text-[#C1272D]">*</span></FormLabel>
+                  <FormControl>
+                    <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col sm:flex-row gap-4 sm:gap-8 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+                      <div className="flex items-center gap-2.5 cursor-pointer">
+                        <RadioGroupItem value="true" id="tot-yes" className="accent-[#C1272D]" />
+                        <FormLabel htmlFor="tot-yes" className="cursor-pointer text-sm font-bold text-slate-700">نعم، مدرب وطني معتمد</FormLabel>
+                      </div>
+                      <div className="flex items-center gap-2.5 cursor-pointer">
+                        <RadioGroupItem value="false" id="tot-no" className="accent-[#C1272D]" />
+                        <FormLabel htmlFor="tot-no" className="cursor-pointer text-sm font-bold text-slate-700">لا، لست مدرباً معتمداً</FormLabel>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                </FormItem>
+              )} />
+
+              {/* حقول الـ TOT الانسيابية */}
+              {isTotTrainer === "true" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-indigo-50/20 p-5 rounded-2xl border border-indigo-100 mt-5 animate-in slide-in-from-top-4 duration-300">
+                  <FormField control={form.control} name="totCertificateUrl" render={({ field: { value: _v, ...field } }) => (
+                    <FormItem className="col-span-1 md:col-span-2 border-dashed border-2 border-slate-200 p-4 rounded-xl bg-white shadow-inner-sm">
+                      <FormLabel className="text-xs font-bold text-slate-700">إرفاق وثيقة/شهادة اعتماد مدرب الـ TOT</FormLabel>
+                      <FormControl><input type="file" ref={totCertInputRef} className="hidden" accept="image/*,.pdf" onChange={handleTotCertUpload} disabled={isUploadingTot} /></FormControl>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <Button type="button" variant="outline" size="sm" className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 font-bold transition-all shadow-sm" onClick={() => totCertInputRef.current?.click()} disabled={isUploadingTot}>📁 رفع الشهادة</Button>
+                        {isUploadingTot && <span className="text-xs text-amber-600 font-bold animate-pulse">⏳ جاري الحفظ والتأمين السحابي...</span>}
+                        {totCertPreview && !isUploadingTot && <span className="text-xs text-green-700 font-bold bg-green-50 px-2 py-0.5 rounded-md border border-green-200">✅ تم فحص المستند وحفظه</span>}
+                      </div>
                     </FormItem>
                   )} />
-                  {currentStatusInKhartoum && currentStatusInKhartoum !== "موجود حالياً" && (
-                    <FormField control={form.control} name="expectedReturnTime" render={({ field }) => (
-                      <FormItem><FormLabel>الزمن المتوقع للعودة للمحلية للمشاركة في العمل</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="اختر المدة المتوقعة" /></SelectTrigger></FormControl>
-                          <SelectContent>{["بعد شهر","بعد شهرين","بعد 3 أشهر","بعد 4 أشهر","بعد 5 أشهر","بعد 6 أشهر","بعد سنة","غير محدد"].map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
+                  
+                  <FormField control={form.control} name="totYear" render={({ field }) => (
+                    <FormItem className="focus-within:translate-x-[-2px] transition-transform duration-200">
+                      <FormLabel className="text-xs font-bold text-slate-700">سنة نيل شهادة الـ TOT</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-600 h-11 text-sm font-medium">
+                            <SelectValue placeholder="اختر السنة" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[190px] overflow-y-auto rounded-xl shadow-xl">{years.map((y) => <SelectItem key={y} value={y.toString()} className="font-medium">{y}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </FormItem>
+                  )} />
+                  
+                  <FormField control={form.control} name="lastFirstAidRefresher" render={({ field }) => (
+                    <FormItem className="focus-within:translate-x-[-2px] transition-transform duration-200">
+                      <FormLabel className="text-xs font-bold text-slate-700">تاريخ آخر دورة تنشيطية/إنعاشية</FormLabel>
+                      <FormControl><Input type="date" className="rounded-xl border-slate-200 bg-white focus-visible:ring-2 focus-visible:ring-indigo-500/10 focus-visible:border-indigo-600 h-11 text-sm font-medium transition-all" {...field} /></FormControl>
+                    </FormItem>
+                  )} />
+                  
+                  <FormField control={form.control} name="otherPrograms" render={({ field }) => (
+                    <FormItem className="col-span-1 md:col-span-2 pt-3 border-t border-indigo-100/60 mt-2">
+                      <FormLabel className="text-xs font-bold text-slate-800">هل لديك اعتماد تدريبي في برامج تخصصية أخرى موازية؟</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-600 h-11 text-sm font-medium">
+                            <SelectValue placeholder="اختر البرنامج الإضافي إن وجد" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl shadow-xl">{OTHER_PROGRAMS.map(p => <SelectItem key={p} value={p} className="font-medium">{p}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </FormItem>
+                  )} />
+
+                  {otherPrograms && otherPrograms !== "لا" && (
+                    <FormField control={form.control} name="otherCertificateUrl" render={({ field: { value: _v, ...field } }) => (
+                      <FormItem className="col-span-1 md:col-span-2 bg-white/80 p-4 rounded-xl border border-dashed border-[#C1272D]/30 animate-in zoom-in-95 duration-200 shadow-sm">
+                        <FormLabel className="text-xs font-bold text-[#C1272D] flex items-center gap-1">رفع شهادة الاعتماد لبرنامج ({otherPrograms}) <span className="text-[#C1272D]">*</span></FormLabel>
+                        <FormControl>
+                          <div className="space-y-2">
+                            <input type="file" ref={otherCertInputRef} className="hidden" accept="image/*,.pdf" onChange={handleOtherCertUpload} disabled={isUploadingOther} />
+                            <div className="flex items-center gap-3 mt-1">
+                              <Button type="button" variant="outline" size="sm" onClick={() => otherCertInputRef.current?.click()} className="border-[#C1272D]/20 text-[#C1272D] hover:bg-[#C1272D]/5 font-bold rounded-xl shadow-sm transition-all" disabled={isUploadingOther}>📁 اختيار الملف</Button>
+                              {isUploadingOther && <span className="text-xs text-amber-600 font-bold animate-pulse">⏳ جاري النقل السحابي السريع...</span>}
+                              {otherCertPreview && !isUploadingOther && <span className="text-xs text-green-700 font-bold bg-green-50 px-2 py-0.5 rounded-md border border-green-200">✅ المستند جاهز للأرشفة بالرئاسة</span>}
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-xs font-bold" />
                       </FormItem>
                     )} />
                   )}
-                  <FormField control={form.control} name="availabilityLevel" render={({ field }) => (
-                    <FormItem><FormLabel>مدى الجاهزية والتوافر لتلبية النداءات الطارئة والميدانية؟ <span className="text-destructive">*</span></FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="اختر مستوى توافرك" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="متاح بالكامل">متاح بالكامل (تفرغ تام للطوارئ)</SelectItem>
-                          <SelectItem value="متاح جزئياً">متاح جزئياً (حسب جدول الطوارئ والمناوبات)</SelectItem>
-                          <SelectItem value="غير متاح حالياً">غير متاح في الوقت الراهن لأسباب قاهرة</SelectItem>
-                        </SelectContent>
-                      </Select><FormMessage />
-                    </FormItem>
-                  )} />
                 </div>
-              </section>
+              )}
+            </section>
 
-              {/* الالتزام القانوني واللوائح */}
-              <section className="space-y-4">
-                <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">المصادقة والالتزام المؤسسي</h3></div>
-                <div className="bg-slate-50 border p-5 rounded-2xl space-y-4">
-                  <a href="/volunteer-manual.pdf" target="_blank" rel="noopener noreferrer" className="text-red-700 hover:underline font-semibold flex items-center gap-2 text-sm md:text-base">
-                    اضغط هنا للإطلاع على دليل تنمية المتطوعين المعتمد بجمعية الهلال الأحمر السوداني (PDF)
-                  </a>
-                  <FormField control={form.control} name="agreedToTerms" render={({ field }) => (
-                    <FormItem className="flex flex-row items-start gap-3 space-y-0">
-                      <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} className="mt-1" /></FormControl>
-                      <div><FormLabel className="font-medium cursor-pointer text-sm md:text-base leading-relaxed">أقر وأوافق تماماً على جميع الضوابط، الالتزامات القانونية، والقيم الأساسية الواردة بدليل تنمية المتطوعين لجمعية الهلال الأحمر السوداني. <span className="text-destructive">*</span></FormLabel></div>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
-              </section>
-
-              {/* زر الإرسال المحدث */}
-              <div className="pt-4">
-                <Button 
-                  type="submit" 
-                  size="lg" 
-                  className="w-full text-lg h-14 bg-gradient-to-r from-[#A31D22] to-[#C1272D] hover:from-[#C1272D] hover:to-[#8B1519] text-white font-black rounded-xl shadow-lg" 
-                  disabled={form.formState.isSubmitting || timeLeft.ended || isUploadingPhoto || isUploadingTot || isUploadingOther}
-                >
-                  {timeLeft.ended 
-                    ? "انتهى زمن الحصر والتسجيل الرسمي" 
-                    : (isUploadingPhoto || isUploadingTot || isUploadingOther)
-                      ? "يرجى الانتظار حتى اكتمال معالجة ورفع الملفات سحابياً..."
-                      : form.formState.isSubmitting 
-                        ? "جاري مراجعة وحفظ البيانات برمجياً..." 
-                        : "تسجيل واعتماد البيانات الرقمية"
-                  }
-                </Button>
+            {/* 5. كارت الوضع الجغرافي والجاهزية الميدانية */}
+            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 border-r-[5px] border-r-blue-600 transition-all hover:shadow-md duration-300">
+              <div className="flex items-center gap-2 pb-4 mb-6 border-b border-slate-100">
+                <span className="text-xl">🏃‍♂️</span>
+                <h3 className="text-lg font-black text-slate-900">الوضعية الجغرافية والتوافر الميداني</h3>
               </div>
-            </form>
-          </Form>
-        </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <FormField control={form.control} name="currentStatusInKhartoum" render={({ field }) => (
+                  <FormItem className="focus-within:translate-x-[-2px] transition-transform duration-200">
+                    <FormLabel className="text-xs font-bold text-slate-700">الموقع الجغرافي أو الوضع الحالي بالولاية <span className="text-[#C1272D]">*</span></FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="rounded-xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 h-11 text-sm font-medium">
+                          <SelectValue placeholder="اختر مكان تواجدك الحالي بدقة" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="rounded-xl shadow-xl">
+                        <SelectItem value="موجود حالياً" className="font-medium">موجود حالياً داخل ولاية الخرطوم</SelectItem>
+                        <SelectItem value="خارج الخرطوم" className="font-medium">نزوح / متواجد خارج حدود الولاية مؤقتاً</SelectItem>
+                        <SelectItem value="مسافر خارج البلاد" className="font-medium">خارج السودان حالياً في مهمة أو اغتراب</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage className="text-xs font-bold" />
+                  </FormItem>
+                )} />
+                
+                {currentStatusInKhartoum && currentStatusInKhartoum !== "موجود حالياً" && (
+                  <FormField control={form.control} name="expectedReturnTime" render={({ field }) => (
+                    <FormItem className="focus-within:translate-x-[-2px] transition-transform duration-200 animate-in slide-in-from-right-2 duration-200">
+                      <FormLabel className="text-xs font-bold text-slate-700">الأفق الزمني المتوقع للعودة إلى المحلية للعمل</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-slate-200 bg-white focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 h-11 text-sm font-medium">
+                            <SelectValue placeholder="حدد المدة الزمنية التقريبية" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl shadow-xl">{["بعد شهر","بعد شهرين","بعد 3 أشهر","بعد 4 أشهر","بعد 5 أشهر","بعد 6 أشهر","بعد سنة","غير محدد"].map((v) => <SelectItem key={v} value={v} className="font-medium">{v}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs font-bold" />
+                    </FormItem>
+                  )} />
+                )}
+                
+                <FormField control={form.control} name="availabilityLevel" render={({ field }) => (
+                  <FormItem className="col-span-1 md:col-span-2 focus-within:translate-x-[-2px] transition-transform duration-200">
+                    <FormLabel className="text-xs font-bold text-slate-700">مستوى الجاهزية والتفرغ لتلبية نداءات الطوارئ العاجلة <span className="text-[#C1272D]">*</span></FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="rounded-xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-600 h-11 text-sm font-medium">
+                          <SelectValue placeholder="اختر مستوى توافرك الميداني" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="rounded-xl shadow-xl">
+                        <SelectItem value="متاح بالكامل" className="font-medium">💼 متاح بالكامل (تفرغ مطلق واستجابة على مدار الساعة)</SelectItem>
+                        <SelectItem value="متاح جزئياً" className="font-medium">⏱️ متاح جزئياً (وفقاً لجداول المناوبات المحددة مسبقاً)</SelectItem>
+                        <SelectItem value="غير متاح حالياً" className="font-medium">❌ غير متاح في الوقت الراهن لظروف قاهرة ومبررة</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage className="text-xs font-bold" />
+                  </FormItem>
+                )} />
+              </div>
+            </section>
+
+            {/* 6. كارت الالتزام والمصادقة اللائحية الفخم */}
+            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 border-r-[5px] border-r-slate-800 transition-all hover:shadow-md duration-300">
+              <div className="flex items-center gap-2 pb-4 mb-4 border-b border-slate-100">
+                <span className="text-xl">⚖️</span>
+                <h3 className="text-lg font-black text-slate-900">المصادقة والمسؤولية اللائحية والمؤسسية</h3>
+              </div>
+              
+              <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4 shadow-inner-sm">
+                <a href="/volunteer-manual.pdf" target="_blank" rel="noopener noreferrer" className="text-[#C1272D] hover:text-[#8B1519] hover:underline font-bold flex items-center gap-2 text-sm transition-colors">
+                  📖 اضغط هنا لقراءة دليل تنمية المتطوعين المعتمد بجمعية الهلال الأحمر السوداني (ملف PDF رسمي)
+                </a>
+                
+                <FormField control={form.control} name="agreedToTerms" render={({ field }) => (
+                  <FormItem className="flex flex-row items-start gap-3 space-y-0 pt-2 border-t border-slate-200/60">
+                    <FormControl>
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} className="mt-1 border-slate-300 data-[state=checked]:bg-[#C1272D] data-[state=checked]:border-[#C1272D] rounded-md transition-all scale-110" />
+                    </FormControl>
+                    <div className="space-y-1">
+                      <FormLabel className="font-bold text-slate-700 cursor-pointer text-xs md:text-sm leading-relaxed block select-none">
+                        أقر وأوافق بصفتي متطوعاً ملتزماً، على كافة المبادئ السبعة الأساسية، الضوابط اللائحية، والموجبات القانونية الواردة بالدليل المعتمد لجمعية الهلال الأحمر السوداني. <span className="text-[#C1272D]">*</span>
+                      </FormLabel>
+                    </div>
+                    <FormMessage className="text-xs font-bold block" />
+                  </FormItem>
+                )} />
+              </div>
+            </section>
+
+            {/* زر الإرسال المحدث والمليء بالتغذية الراجعة الحيوية */}
+            <div className="pt-4">
+              <Button 
+                type="submit" 
+                size="lg" 
+                className="w-full text-base h-14 bg-gradient-to-r from-[#A31D22] via-[#C1272D] to-[#8B1519] hover:from-[#C1272D] hover:to-[#8B1519] text-white font-black rounded-2xl shadow-xl shadow-[#C1272D]/10 transition-all transform active:scale-[0.99]" 
+                disabled={form.formState.isSubmitting || timeLeft.ended || isUploadingPhoto || isUploadingTot || isUploadingOther}
+              >
+                {timeLeft.ended 
+                  ? "🔒 انتهت المدة القانونية للحصر الرسمي" 
+                  : (isUploadingPhoto || isUploadingTot || isUploadingOther)
+                    ? "⏳ جاري تأمين ورفع ملفاتك سحابياً.. يرجى الانتظار"
+                    : form.formState.isSubmitting 
+                      ? "⚡ جاري معالجة الأرشفة وحفظ البيانات برمجياً..." 
+                      : "🚀 تسجيل واعتماد البيانات الرقمية بالفرع الرئيسي"
+                }
+              </Button>
+            </div>
+          </form>
+        </Form>
       </div>
 
-      <footer className="mt-12 pb-10 text-center border-t border-slate-200 pt-8">
+      {/* الفوتر الاحترافي المنمق */}
+      <footer className="mt-16 pb-12 text-center border-t border-slate-200 pt-8 bg-slate-50/50">
         <div className="container mx-auto px-4 flex flex-col items-center gap-3">
           <div>
-            <p className="text-gray-500 text-xs md:text-sm font-medium">جميع الحقوق محفوظة لدى <span className="text-[#C1272D] font-bold mx-1">جمعية الهلال الأحمر السوداني</span> &copy; 2026</p>
-            <p className="text-[11px] text-gray-400 font-bold mt-1">مكتب طوارئ محلية جبل أولياء</p>
+            <p className="text-slate-500 text-xs md:text-sm font-bold">جميع الحقوق محفوظة ومؤمنة لدى <span className="text-[#C1272D] font-black mx-0.5">جمعية الهلال الأحمر السوداني</span> &copy; 2026</p>
+            <p className="text-[10px] text-slate-400 font-bold mt-1 tracking-wider">مكتب طوارئ محلية جبل أولياء — الأمانة الرقمية</p>
           </div>
-          <div className="mt-4 flex flex-col items-center gap-2">
-            <div dir="ltr" className="flex items-center justify-center gap-1.5 text-[10px] md:text-xs text-gray-400 font-medium">
-              <span>Developed with</span><span className="inline-block text-[#C1272D]">❤️</span><span>by</span><span className="text-gray-800 font-black tracking-tight">Loai & Hazim</span>
+          <div className="mt-2">
+            <div dir="ltr" className="flex items-center justify-center gap-1.5 text-[10px] md:text-xs text-slate-400 font-bold bg-white px-3 py-1 rounded-full border border-slate-200 shadow-inner-sm">
+              <span>System Architected with</span><span className="inline-block text-[#C1272D] animate-pulse">❤️</span><span>by</span><span className="text-slate-800 font-black tracking-tight">Loai & Hazim</span>
             </div>
           </div>
         </div>
