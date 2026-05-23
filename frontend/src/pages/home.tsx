@@ -202,11 +202,11 @@ export default function Home() {
   const phoneVal = watchedValues.phone || "";
   let operatorBadge = null;
   if (phoneVal.startsWith("091") || phoneVal.startsWith("096")) {
-    operatorBadge = <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-1 rounded-md tracking-wide shadow-sm animate-in fade-in duration-200">Zain زين</span>;
+    operatorBadge = <span className="text-[10px] font-black bg-violet-600 text-white px-2 py-1 rounded-md tracking-wide shadow-sm animate-in fade-in duration-200">Zain زين</span>;
   } else if (phoneVal.startsWith("092") || phoneVal.startsWith("099")) {
     operatorBadge = <span className="text-[10px] font-black bg-yellow-400 text-slate-900 px-2 py-1 rounded-md tracking-wide shadow-sm animate-in fade-in duration-200">MTN ام تي ان</span>;
-  } else if (phoneVal.startsWith("090") || phoneVal.startsWith("093")) {
-    operatorBadge = <span className="text-[10px] font-black bg-red-600 text-white px-2 py-1 rounded-md tracking-wide shadow-sm animate-in fade-in duration-200">Sudani سوداني</span>;
+  } else if (phoneVal.startsWith("011") || phoneVal.startsWith("012")) {
+    operatorBadge = <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-1 rounded-md tracking-wide shadow-sm animate-in fade-in duration-200">Sudani سوداني</span>;
   }
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -329,7 +329,7 @@ export default function Home() {
       const result = await response.json();
       if (response.ok) {
         localStorage.setItem("volunteerData", JSON.stringify(result));
-        toast({ title: "تم التسجيل بنجاح", description: "شكراً لك على مشاركتك وفخرنا بك!" });
+        toast({ title: "تم التسجيل بنجاح", description: "شكراً لك على تسجيل بياناتك وفخرنا بك!" });
         setLocation("/success");
       } else {
         throw new Error(result.error || "حدث خطأ في التسجيل");
@@ -544,7 +544,7 @@ export default function Home() {
             <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 border-r-[5px] border-r-amber-500 transition-all hover:shadow-md duration-300">
               <div className="flex items-center gap-2 pb-4 mb-4 border-b border-slate-100">
                 <span className="text-xl">📸</span>
-                <h3 className="text-lg font-black text-slate-900">الصورة الشخصية للبطاقة <span className="text-xs font-normal text-slate-400">(اختياري)</span></h3>
+                <h3 className="text-lg font-black text-slate-900">الصورة الشخصية  <span className="text-xs font-normal text-slate-400">(اختياري)</span></h3>
               </div>
               
               <div className="mb-4 text-xs font-medium text-slate-600 bg-slate-50 rounded-xl p-3 border border-slate-150 space-y-1">
@@ -552,7 +552,7 @@ export default function Home() {
                 <ul className="list-disc list-inside space-y-1 pr-1 text-slate-600 text-[11px]">
                   <li>إرفاق الصورة الشخصية <strong>(اختياري تماماً)</strong> وليس إجبارياً لإتمام التسجيل.</li>
                   <li>في حال إرفاقها، <strong>ستظهر هذه الصورة في بطاقتك الرقمية المعتمدة</strong> الصادرة من النظام.</li>
-                  <li>يرجى الحرص على رفع صورة <strong>بخلفية بيضاء تماماً</strong> لضمان جودة وتناسق التصميم.</li>
+                  <li>يرجى الحرص على رفع صورة <strong>بخلفية سادة تماماً</strong> لضمان جودة وتناسق التصميم.</li>
                 </ul>
               </div>
 
@@ -644,7 +644,7 @@ export default function Home() {
                   <Select onValueChange={field.onChange} defaultValue={field.value ? field.value.toString() : ""}>
                     <FormControl>
                       <SelectTrigger className="rounded-xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-600 h-11 text-sm font-medium transition-all">
-                        <SelectValue placeholder={isLoadingUnits ? "⏳ جاري استدعاء الوحدات من الخادم..." : "اضغط للاختيار من قائمة الوحدات المفعلة"} />
+                        <SelectValue placeholder={isLoadingUnits ? "⏳ جاري تحميل الوحدات ..." : "اضغط للاختيار من قائمة الوحدات المفعلة"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="rounded-xl shadow-xl">
@@ -717,7 +717,7 @@ export default function Home() {
                   
                   <FormField control={form.control} name="lastFirstAidRefresher" render={({ field }) => (
                     <FormItem className="focus-within:translate-x-[-2px] transition-transform duration-200">
-                      <FormLabel className="text-xs font-bold text-slate-700">متى تلقيت آخر دورة تدريبية</FormLabel>
+                      <FormLabel className="text-xs font-bold text-slate-700">متى تلقيت آخر دورة تنشيطية</FormLabel>
                       <FormControl><Input type="date" className="rounded-xl border-slate-200 bg-white focus-visible:ring-2 focus-visible:ring-indigo-500/10 focus-visible:border-indigo-600 h-11 text-sm font-medium transition-all" {...field} /></FormControl>
                     </FormItem>
                   )} />
@@ -864,7 +864,7 @@ export default function Home() {
                   : (isUploadingPhoto || isUploadingTot || isUploadingOther)
                     ? "⏳ يرجى الانتظار حتى اكتمال معالجة ورفع الملفات..."
                     : form.formState.isSubmitting 
-                      ? "⚡ جاري مراجعة وحفظ البيانات برمجياً..." 
+                      ? "⚡ جاري مراجعة وحفظ البيانات ..." 
                       : "تسجيل متطوع جديد"
                 }
               </Button>
@@ -878,11 +878,11 @@ export default function Home() {
         <div className="container mx-auto px-4 flex flex-col items-center gap-3">
           <div>
             <p className="text-slate-500 text-xs md:text-sm font-bold">جميع الحقوق محفوظة لدى <span className="text-[#C1272D] font-black mx-0.5">جمعية الهلال الأحمر السوداني</span> &copy; 2026</p>
-            <p className="text-[10px] text-slate-400 font-bold mt-1 tracking-wider">مكتب طوارئ محلية جبل أولياء — الأمانة الرقمية</p>
+            <p className="text-[10px] text-slate-400 font-bold mt-1 tracking-wider">مكتب طوارئ محلية جبل أولياء — التحول الرقمي</p>
           </div>
           <div className="mt-2">
             <div dir="ltr" className="flex items-center justify-center gap-1.5 text-[10px] md:text-xs text-slate-400 font-bold bg-white px-3 py-1 rounded-full border border-slate-200 shadow-inner-sm">
-              <span>Developed with</span><span className="inline-block text-[#C1272D] animate-pulse">❤️</span><span>by</span><span className="text-slate-800 font-black tracking-tight">Loai & Hazim</span>
+              <span>Developed with</span><span className="inline-block text-[#C1272D] animate-pulse">❤️</span><span>by</span><span className="text-slate-800 font-black tracking-tight">Loai Jafer & Hazim mohammed</span>
             </div>
           </div>
         </div>
