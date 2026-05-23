@@ -24,7 +24,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState, useRef } from "react";
 
-// تعريف نوع البيانات الخاصة بالوحدات لضمان سلامة الكود
 interface UnitType {
   id: number;
   name: string;
@@ -39,13 +38,12 @@ const formSchema = z.object({
   phone: z.string().min(9, "يجب إدخال رقم الهاتف بشكل صحيح"),
   whatsapp: z.string().optional(),
   yearOfVolunteering: z.string().min(4, "يجب اختيار سنة التطوع"),
-  unitId: z.coerce.number().min(1, "يجب اختيار الوحدة"),
+  unitId: z.coerce.number().min(1, "يجب اختيار الوحدة الإدارية"),
   photoUrl: z.string().optional().or(z.literal("")),
   isTotTrainer: z.enum(["true", "false"]),
   totYear: z.string().optional(),
   totCertificateUrl: z.string().nullable().optional().or(z.literal("")),
   otherCertificateUrl: z.string().nullable().optional().or(z.literal("")),
-
   lastFirstAidRefresher: z.string().optional(),
   otherPrograms: z.string().optional(),
   currentStatusInKhartoum: z.string().min(1, "يجب اختيار الوضع الحالي"),
@@ -69,47 +67,60 @@ type FormValues = z.infer<typeof formSchema>;
 export default function Home() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-    useEffect(() => {
+
+  useEffect(() => {
     const wakeUpServer = async () => {
       try {
         await fetch('https://volunteer-system-v3.onrender.com');
-        console.log('📡 تم إرسال نغزة التصحية للسيرفر بنجاح.. جاري الاستيقاظ!');
       } catch (error) {
         console.log('Silent ping sent to server.');
       }
     };
-
     wakeUpServer();
   }, []);
 
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, ended: false });
-  
-  // المخزن الديناميكي للوحدات القادمة من قاعدة البيانات
   const [dbUnits, setDbUnits] = useState<UnitType[]>([]);
   const [isLoadingUnits, setIsLoadingUnits] = useState(true);
 
   // إعدادات كلاودنري السحرية
   const CLOUDINARY_CLOUD_NAME = "ddznegswc";
-  const CLOUDINARY_UPLOAD_PRESET = "kaee3l5k"; // <--- ضع اسم الـ Preset حقك هنا يا هندسة
+  const CLOUDINARY_UPLOAD_PRESET = "kaee3l5k";
 
-  // حالات تحميل المرفقات السحابية (تمنع الحفظ النهائي أثناء الرفع)
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isUploadingTot, setIsUploadingTot] = useState(false);
   const [isUploadingOther, setIsUploadingOther] = useState(false);
 
-  // معاينات الملفات المرفوعة محلياً للشاشة
+  // حالات المعاينة والتحكم الديناميكي بالصورة الشخصية (Zoom & Pan)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
+  const [imageZoom, setImageZoom] = useState<number>(1);
+  const [imagePanX, setImagePanX] = useState<number>(0);
+  const [imagePanY, setImagePanY] = useState<number>(0);
+
   const [totCertPreview, setTotCertPreview] = useState<string | null>(null);
   const [otherCertPreview, setOtherCertPreview] = useState<string | null>(null);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
   const totCertInputRef = useRef<HTMLInputElement>(null);
   const otherCertInputRef = useRef<HTMLInputElement>(null);
+  const imageElementRef = useRef<HTMLImageElement>(null);
 
-  // رابط سيرفر ريندر المعتمد
   const SERVER_URL = "https://volunteer-system-v3.onrender.com";
 
-  // دالة الرفع المباشرة والآمنة إلى سيرفر Cloudinary
+  // إدارة ظهور شاشة الترحيب الذكية عبر التخزين المحلي لمنع تكرارها عند التحديث
+  const [showWelcome, setShowWelcome] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !localStorage.getItem("srcs_welcome_dismissed");
+    }
+    return true;
+  });
+
+  const handleDismissWelcome = () => {
+    localStorage.setItem("srcs_welcome_dismissed", "true");
+    setShowWelcome(false);
+  };
+
   const uploadToCloudinary = async (fileOrBase64: File | string): Promise<string> => {
     const formData = new FormData();
     formData.append("file", fileOrBase64);
@@ -119,38 +130,28 @@ export default function Home() {
       method: "POST",
       body: formData,
     });
-
-    if (!response.ok) {
-      throw new Error("فشل رفع الملف إلى السيرفر السحابي");
-    }
-
+    if (!response.ok) throw new Error("فشل رفع الملف إلى السيرفر السحابي");
     const data = await response.json();
-    return data.secure_url; // الرابط النصي الصغير للـ URL المباشر
+    return data.secure_url;
   };
 
-  // جلب الوحدات ديناميكياً من السيرفر عند تحميل الصفحة
   useEffect(() => {
     const fetchLiveUnits = async () => {
       try {
         const response = await fetch(`${SERVER_URL}/api/units`);
-        if (!response.ok) throw new Error("فشل جلب الوحدات من السيرفر");
+        if (!response.ok) throw new Error("فشل جلب الوحدات");
         const data = await response.json();
         setDbUnits(data);
       } catch (error) {
-        console.error("Error fetching units:", error);
-        toast({
-          variant: "destructive",
-          title: "خطأ في جلب الوحدات",
-          description: "فشل السيرفر في تحميل الوحدات، تأكد من اتصال قاعدة البيانات.",
-        });
+        console.error(error);
       } finally {
         setIsLoadingUnits(false);
       }
     };
-
     fetchLiveUnits();
-  }, [toast]);
+  }, []);
 
+  // ضبط العداد لينتهي رسمياً وفعلياً في 30 يونيو 2026
   useEffect(() => {
     const targetDate = new Date("2026-06-30T23:59:59").getTime();
     const tick = () => {
@@ -173,15 +174,13 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  const [showWelcome, setShowWelcome] = useState(true);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: "", nationalId: "", phone: "", whatsapp: "", yearOfVolunteering: "",
       unitId: 0, photoUrl: "", isTotTrainer: "false", totYear: "", totCertificateUrl: "",
-      otherCertificateUrl: "",
-      lastFirstAidRefresher: "", otherPrograms: "لا", currentStatusInKhartoum: "",
-      expectedReturnTime: "", availabilityLevel: "", agreedToTerms: false,
+      otherCertificateUrl: "", lastFirstAidRefresher: "", otherPrograms: "لا", 
+      currentStatusInKhartoum: "", expectedReturnTime: "", availabilityLevel: "", agreedToTerms: false,
     },
   });
 
@@ -189,81 +188,94 @@ export default function Home() {
   const otherPrograms = form.watch("otherPrograms");
   const currentStatusInKhartoum = form.watch("currentStatusInKhartoum");
 
-  // معالجة وضغط الصورة الشخصية ورفعها سحابياً
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // التقاط الصورة الأولية وفتح لوحة التعديل
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 3 * 1024 * 1024) {
-      toast({ variant: "destructive", title: "الصورة كبيرة جداً", description: "يجب أن يكون حجم الصورة أقل من 3 ميغابايت" });
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "الملف كبير جداً", description: "يجب أن يكون حجم الصورة أقل من 5 ميغابايت" });
       return;
     }
-    
-    setIsUploadingPhoto(true);
+
     const reader = new FileReader();
     reader.onloadend = () => {
-      const img = new Image();
-      img.onload = async () => {
-        const maxDim = 600;
-        const scale = Math.min(maxDim / img.width, maxDim / img.height, 1);
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const compressedBase64 = canvas.toDataURL("image/jpeg", 0.82);
-        
-        setPhotoPreview(compressedBase64); // عرض المعاينة فوراً للمستخدم بالـ base64 المخفف
-
-        try {
-          const cloudinaryUrl = await uploadToCloudinary(compressedBase64);
-          form.setValue("photoUrl", cloudinaryUrl, { shouldValidate: true });
-        } catch (error) {
-          toast({ variant: "destructive", title: "خطأ سحابي", description: "فشل رفع الصورة الشخصية لـ Cloudinary" });
-          setPhotoPreview(null);
-        } finally {
-          setIsUploadingPhoto(false);
-        }
-      };
-      img.src = reader.result as string;
+      setRawImageSrc(reader.result as string);
+      setImageZoom(1);
+      setImagePanX(0);
+      setImagePanY(0);
     };
     reader.readAsDataURL(file);
   };
 
-  // معالجة ورفع شهادة TOT سحابياً
+  // معالجة ودمج التعديلات (Zoom & Pan) داخل Canvas ومن ثم الرفع السحابي لـ Cloudinary
+  const handleApplyImageAdjustments = async () => {
+    if (!imageElementRef.current || !rawImageSrc) return;
+
+    setIsUploadingPhoto(true);
+    const canvas = document.createElement("canvas");
+    canvas.width = 400;
+    canvas.height = 400;
+    const ctx = canvas.getContext("2d");
+
+    if (ctx) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, 400, 400);
+
+      ctx.save();
+      ctx.translate(200, 200);
+      ctx.scale(imageZoom, imageZoom);
+      ctx.translate(imagePanX, imagePanY);
+
+      const img = imageElementRef.current;
+      const minDim = Math.min(img.naturalWidth, img.naturalHeight);
+      const sx = (img.naturalWidth - minDim) / 2;
+      const sy = (img.naturalHeight - minDim) / 2;
+
+      ctx.drawImage(img, sx, sy, minDim, minDim, -200, -200, 400, 400);
+      ctx.restore();
+
+      const croppedBase64 = canvas.toDataURL("image/jpeg", 0.85);
+      setPhotoPreview(croppedBase64);
+
+      try {
+        const cloudinaryUrl = await uploadToCloudinary(croppedBase64);
+        form.setValue("photoUrl", cloudinaryUrl, { shouldValidate: true });
+        setRawImageSrc(null); // إغلاق لوحة التعديل بعد النجاح التام
+        toast({ title: "تم ضبط الصورة", description: "تم معالجة مظهر صورتك وحفظها سحابياً بنجاح." });
+      } catch (error) {
+        toast({ variant: "destructive", title: "خطأ في الرفع السحابي", description: "فشل حفظ الصورة المعدلة، يرجى المحاولة مجدداً." });
+        setPhotoPreview(null);
+      } finally {
+        setIsUploadingPhoto(false);
+      }
+    }
+  };
+
   const handleTotCertUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setIsUploadingTot(true);
-    
-    // لعمل المعاينة السريعة للشاشة
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setTotCertPreview(reader.result as string);
-    };
+    reader.onloadend = () => setTotCertPreview(reader.result as string);
     reader.readAsDataURL(file);
 
     try {
       const cloudinaryUrl = await uploadToCloudinary(file);
       form.setValue("totCertificateUrl", cloudinaryUrl, { shouldValidate: true });
     } catch (error) {
-      toast({ variant: "destructive", title: "خطأ في الرفع", description: "لم يتم حفظ شهادة الـ TOT سحابياً، أعد المحاولة." });
+      toast({ variant: "destructive", title: "خطأ في الرفع", description: "لم يتم حفظ شهادة الـ TOT سحابياً." });
       setTotCertPreview(null);
     } finally {
       setIsUploadingTot(false);
     }
   };
 
-  // معالجة ورفع الشهادات الإضافية الأخرى سحابياً
   const handleOtherCertUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setIsUploadingOther(true);
-    
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setOtherCertPreview(reader.result as string);
-    };
+    reader.onloadend = () => setOtherCertPreview(reader.result as string);
     reader.readAsDataURL(file);
 
     try {
@@ -282,14 +294,10 @@ export default function Home() {
       const response = await fetch(`${SERVER_URL}/api/volunteers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          isTotTrainer: data.isTotTrainer === "true", 
-        }),
+        body: JSON.stringify({ ...data, isTotTrainer: data.isTotTrainer === "true" }),
       });
 
       const result = await response.json();
-
       if (response.ok) {
         localStorage.setItem("volunteerData", JSON.stringify(result));
         toast({ title: "تم التسجيل بنجاح", description: "شكراً لك على مشاركتك وفخرنا بك!" });
@@ -298,12 +306,7 @@ export default function Home() {
         throw new Error(result.error || "حدث خطأ في التسجيل");
       }
     } catch (err: any) {
-      console.error("Submission Error:", err);
-      toast({
-        variant: "destructive",
-        title: "خطأ في التسجيل",
-        description: err.message || "حدث خطأ غير متوقع",
-      });
+      toast({ variant: "destructive", title: "خطأ في التسجيل", description: err.message || "حدث خطأ غير متوقع" });
     }
   };
 
@@ -311,11 +314,10 @@ export default function Home() {
   const years = Array.from({ length: currentYear - 1970 + 1 }, (_, i) => currentYear - i);
 
   return (
-    <div className="min-h-screen bg-muted/30 pb-12" dir="rtl">
-      {/* الترحيب الأولي المنبثق */}
+    <div className="min-h-screen bg-slate-50 pb-12" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
       {showWelcome && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-500">
-          <div className="relative bg-white/5 backdrop-blur-3xl rounded-[3rem] max-w-lg w-full overflow-hidden shadow-2xl border border-white/10 transform animate-in zoom-in duration-700">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+          <div className="relative bg-white/5 backdrop-blur-3xl rounded-[3rem] max-w-lg w-full overflow-hidden shadow-2xl border border-white/10">
             <div className="bg-gradient-to-br from-[#A31D22] via-[#C1272D] to-[#8B1519] p-10 text-center text-white border-b-8 border-yellow-500">
               <div className="w-24 h-24 bg-white/10 rounded-full mx-auto mb-6 flex items-center justify-center backdrop-blur-lg border-4 border-white/20 shadow-xl">
                  <span className="text-5xl">🇸🇩</span>
@@ -332,8 +334,8 @@ export default function Home() {
               </p>
               <button 
                 type="button"
-                onClick={() => setShowWelcome(false)}
-                className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-[#630D11] font-black py-5 rounded-3xl shadow-2xl transition-all transform active:scale-95 flex items-center justify-center gap-3 group"
+                onClick={handleDismissWelcome}
+                className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-[#630D11] font-black py-5 rounded-3xl shadow-2xl transition-all transform active:scale-95 flex items-center justify-center gap-3 group"
               >
                 فخور بالانضمام .. ابدأ الآن
                 <span className="text-2xl group-hover:translate-x-[-8px] transition-transform">←</span>
@@ -343,7 +345,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* الهيدر الرئيسي مع العداد */}
+      {/* الهيدر الرئيسي وتحديث العداد لـ 30 يونيو */}
       <div className="relative bg-gradient-to-r from-[#A31D22] via-[#C1272D] to-[#A31D22] text-white overflow-hidden py-8 px-4 border-b-4 border-yellow-500/20 shadow-xl">
         <div className="container max-w-6xl mx-auto relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="text-center md:text-right space-y-3 flex-1">
@@ -372,7 +374,7 @@ export default function Home() {
             <div className="flex items-center justify-between mb-4 px-2">
               <span className="text-[10px] font-bold text-yellow-500 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-ping"></span>
-                ينتهي الحصر: 30 مايو 2026
+                ينتهي الحصر: 30 يونيو 2026
               </span>
               <span className="text-[9px] opacity-50 font-mono uppercase tracking-tighter">Countdown</span>
             </div>
@@ -399,23 +401,20 @@ export default function Home() {
         </div>
       </div>
 
-      {/* روابط الإدارة والمتابعة السريعة */}
       <div className="container max-w-3xl mx-auto px-4 pt-5 flex flex-wrap gap-3 justify-end">
-        <Button variant="outline" size="sm" onClick={() => setLocation("/status")} className="border-primary/30 text-primary hover:bg-primary/5">
+        <Button variant="outline" size="sm" onClick={() => setLocation("/status")} className="border-red-600/30 text-red-700 hover:bg-red-50">
           مراجعة حالة الطلب
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => setLocation("/admin")} className="text-muted-foreground hover:text-foreground text-xs">دخول الإدارة</Button>
       </div>
 
-      {/* جسم الاستمارة الرئيسي */}
       <div className="container max-w-3xl mx-auto px-4 mt-3">
-        <div className="bg-card text-card-foreground rounded-xl shadow-lg border p-6 md:p-8">
+        <div className="bg-white text-slate-900 rounded-2xl shadow-xl border p-6 md:p-8">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               
               {/* البيانات الأساسية */}
               <section className="space-y-6">
-                <div className="border-b pb-2"><h3 className="text-xl font-bold text-primary">البيانات الأساسية</h3></div>
+                <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">البيانات الأساسية</h3></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField control={form.control} name="fullName" render={({ field }) => (
                     <FormItem><FormLabel>الاسم الرباعي كاملاً <span className="text-destructive">*</span></FormLabel><FormControl><Input placeholder="أدخل الاسم الرباعي كاملاً كما بالوثائق" {...field} /></FormControl><FormMessage /></FormItem>
@@ -424,25 +423,16 @@ export default function Home() {
                     <FormItem>
                       <FormLabel>الرقم الوطني <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
-                        <Input 
-                          type="text" 
-                          inputMode="numeric" 
-                          placeholder="أدخل الأرقام الوطنية فقط" 
-                          dir="ltr" 
-                          className="text-right" 
-                          {...field} 
-                          onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))} 
-                        />
+                        <Input type="text" inputMode="numeric" placeholder="أدخل الأرقام الوطنية فقط" dir="ltr" className="text-right" {...field} onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))} />
                       </FormControl>
-                      <p className="text-[10px] text-muted-foreground mt-1">يرجى إدخال الأرقام فقط (بدون مسافات أو رموز)</p>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="phone" render={({ field }) => (
-                    <FormItem><FormLabel>رقم الهاتف الحالي <span className="text-destructive">*</span></FormLabel><FormControl><Input placeholder="09xxxxxxxx" dir="ltr" className="text-right" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>رقم الهاتف الحالي <span className="text-destructive">*</span></FormLabel><FormControl><Input placeholder="09xxxxxxxx" dir="ltr" className="text-right" {...field} onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="whatsapp" render={({ field }) => (
-                    <FormItem><FormLabel>رقم الواتساب (اختياري)</FormLabel><FormControl><Input placeholder="09xxxxxxxx" dir="ltr" className="text-right" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>رقم الواتساب (اختياري)</FormLabel><FormControl><Input placeholder="09xxxxxxxx" dir="ltr" className="text-right" {...field} onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="yearOfVolunteering" render={({ field }) => (
                     <FormItem><FormLabel>في أي سنة بدأت التطوع مع الهلال الأحمر؟ <span className="text-destructive">*</span></FormLabel>
@@ -455,59 +445,102 @@ export default function Home() {
                 </div>
               </section>
 
-              {/* الصورة الشخصية */}
+              {/* الصورة الشخصية مع أداة التكبير والتحريك الاحترافية */}
               <section className="space-y-4">
-                <div className="border-b pb-2"><h3 className="text-xl font-bold text-primary">الصورة الشخصية للبطاقة</h3></div>
+                <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">الصورة الشخصية للبطاقة</h3></div>
                 <FormField control={form.control} name="photoUrl" render={({ field: { value: _v, ...field } }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">إرفاق صورة شخصية حديثة <span className="text-[11px] font-normal text-muted-foreground">(اختياري)</span></FormLabel>
-                    <div className="flex items-start gap-5">
-                      <div className="w-24 h-24 rounded-full border-2 border-dashed border-primary/40 bg-muted flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-primary/70 transition-colors" onClick={() => !isUploadingPhoto && photoInputRef.current?.click()}>
-                        {isUploadingPhoto ? (
-                          <div className="text-center p-1 text-xs text-amber-600 font-bold animate-pulse">جاري الرفع سحابياً...</div>
-                        ) : photoPreview ? (
-                          <img src={photoPreview} alt="الصورة الشخصية" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="text-center text-muted-foreground">
-                            <span className="text-[10px]">اضغط لرفع صورة</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        <FormControl>
-                          <input {...field} ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} value="" disabled={isUploadingPhoto} />
-                        </FormControl>
-                        <Button type="button" variant="outline" size="sm" onClick={() => photoInputRef.current?.click()} disabled={isUploadingPhoto}>
-                          {isUploadingPhoto ? "جاري الحفظ..." : photoPreview ? "تغيير الصورة" : "رفع الصورة الشخصية"}
-                        </Button>
+                    
+                    <div className="flex flex-col gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                      <div className="flex items-center gap-5">
+                        {/* مربع المعاينة الدائري النهائي المعتمد */}
+                        <div className="w-24 h-24 rounded-full border-2 border-red-600 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                          {photoPreview ? (
+                            <img src={photoPreview} alt="الصورة النهائية" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-[10px] text-gray-400 text-center p-1">لا توجد صورة معتمدة</span>
+                          )}
+                        </div>
+                        
                         <div className="space-y-2">
-                          <p className="text-[11px] leading-relaxed text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                            <strong>إرشادات:</strong> اختيارية وتظهر في بطاقتك الرقمية. يتم حفظها آمنة سحابياً دون التأثير على ذاكرة النظام المحدودة.
+                          <FormControl>
+                            <input {...field} ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} value="" />
+                          </FormControl>
+                          <Button type="button" variant="outline" size="sm" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => photoInputRef.current?.click()}>
+                            {photoPreview ? "تغيير الصورة الحالية" : "اختيار صورة من الموبايل"}
+                          </Button>
+                          <p className="text-[11px] leading-relaxed text-amber-800 bg-amber-500/10 border border-amber-200 rounded-lg px-3 py-1.5">
+                            💡 <strong>إرشادات مهمة:</strong> يرجى جعل ملامح وجهك واضحة وفي منتصف الإطار تماماً ليظهر الكارنيه بشكل رسمي فخم.
                           </p>
                         </div>
-                        {photoPreview && !isUploadingPhoto && (
-                          <button type="button" className="text-xs text-destructive hover:underline block" onClick={() => { setPhotoPreview(null); form.setValue("photoUrl", ""); }}>حذف الصورة</button>
-                        )}
                       </div>
+
+                      {/* أداة التحكم والضبط الحيوي (Zoom & Pan Tool) */}
+                      {rawImageSrc && (
+                        <div className="border-t pt-4 mt-2 space-y-4 bg-white p-4 rounded-xl border-dashed border-slate-300 animate-in zoom-in-95">
+                          <p className="text-xs font-black text-slate-800 flex items-center gap-1">⚙️ لوحة ضبط وتوسيط الصورة الشخصية</p>
+                          
+                          <div className="flex flex-col items-center justify-center gap-4 md:flex-row">
+                            {/* الدائرة الحية للمعاينة أثناء التحريك والتحجيم */}
+                            <div className="w-32 h-32 rounded-full border-4 border-emerald-500 overflow-hidden relative bg-slate-100 shrink-0 shadow-md">
+                              <img 
+                                ref={imageElementRef}
+                                src={rawImageSrc} 
+                                alt="تحريج حي" 
+                                className="absolute max-w-none origin-center"
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "contain",
+                                  transform: `scale(${imageZoom}) translate(${imagePanX}px, ${imagePanY}px)`,
+                                  transition: "none"
+                                }}
+                              />
+                            </div>
+
+                            {/* السلايدرز للتحكم الكامل المتوافق مع شاشات الهواتف */}
+                            <div className="w-full flex-1 space-y-3 text-xs">
+                              <div className="space-y-1">
+                                <div className="flex justify-between font-bold text-slate-600"><span>🔍 حجم وتكبير الصورة:</span><span>{imageZoom.toFixed(1)}x</span></div>
+                                <input type="range" min="1" max="4" step="0.1" value={imageZoom} onChange={(e) => setImageZoom(parseFloat(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-red-600" />
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between font-bold text-slate-600"><span>↔️ تحريك يمين / يسار:</span><span>{imagePanX}px</span></div>
+                                <input type="range" min="-100" max="100" step="1" value={imagePanX} onChange={(e) => setImagePanX(parseInt(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-700" />
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between font-bold text-slate-600"><span>↕️ تحريك أعلى / أسفل:</span><span>{imagePanY}px</span></div>
+                                <input type="range" min="-100" max="100" step="1" value={imagePanY} onChange={(e) => setImagePanY(parseInt(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-700" />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end gap-2 pt-2">
+                            <Button type="button" variant="ghost" size="sm" className="text-xs text-slate-500" onClick={() => setRawImageSrc(null)}>إلغاء</Button>
+                            <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold" onClick={handleApplyImageAdjustments} disabled={isUploadingPhoto}>
+                              {isUploadingPhoto ? "جاري المعالجة والرفع سحابياً..." : "✅ اعتماد الصورة الموزونة"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <FormMessage />
                   </FormItem>
                 )} />
               </section>
 
-              {/* الوحدة التطوعية الديناميكية */}
+              {/* تحديث المسمى للوحدة الإدارية */}
               <section className="space-y-4">
-                <div className="border-b pb-2"><h3 className="text-xl font-bold text-primary">الوحدة التطوعية المحلية</h3></div>
+                <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">الوحدة التطوعية المحلية</h3></div>
                 <FormField control={form.control} name="unitId" render={({ field }) => (
                   <FormItem><FormLabel>تتبع لأي وحدة بمحلية جبل أولياء؟ <span className="text-destructive">*</span></FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value ? field.value.toString() : ""}>
-                      <FormControl><SelectTrigger><SelectValue placeholder={isLoadingUnits ? "جاري تحميل الوحدات الحية..." : "اختر الوحدة الميدانية التي تنتمي إليها"} /></SelectTrigger></FormControl>
+                      <FormControl><SelectTrigger><SelectValue placeholder={isLoadingUnits ? "جاري تحميل الوحدات..." : "اختر الوحدة الإدارية التي تنتمي إليها"} /></SelectTrigger></FormControl>
                       <SelectContent>
                         {dbUnits.length > 0 ? (
                           dbUnits.map((u) => (
-                            <SelectItem key={u.id} value={u.id.toString()}>
-                              {u.name} {u.sector ? `(${u.sector})` : ""}
-                            </SelectItem>
+                            <SelectItem key={u.id} value={u.id.toString()}>{u.name} {u.sector ? `(${u.sector})` : ""}</SelectItem>
                           ))
                         ) : (
                           <SelectItem value="0" disabled>لا توجد وحدات متوفرة حالياً</SelectItem>
@@ -518,9 +551,9 @@ export default function Home() {
                 )} />
               </section>
 
-              {/* قسم التدريب TOT والشهادات المعتمده */}
+              {/* قسم التدريب المعتمد وإزالة ألوان الإطار الشاذة */}
               <section className="space-y-6">
-                <div className="border-b pb-2"><h3 className="text-xl font-bold text-primary">السجل التدريبي المعتمد (TOT)</h3></div>
+                <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">السجل التدريبي المعتمد (TOT)</h3></div>
                 <FormField control={form.control} name="isTotTrainer" render={({ field }) => (
                   <FormItem className="space-y-3">
                     <FormLabel>هل أنت مدرب إسعافات أولية معتمد بالجمعية؟ <span className="text-destructive">*</span></FormLabel>
@@ -534,24 +567,16 @@ export default function Home() {
                 )} />
 
                 {isTotTrainer === "true" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-primary/5 p-5 rounded-lg border border-primary/15 animate-in fade-in slide-in-from-top-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-red-50/20 p-5 rounded-2xl border border-red-100 animate-in slide-in-from-top-2">
                     <FormField control={form.control} name="totCertificateUrl" render={({ field: { value: _v, ...field } }) => (
-                      <FormItem className="col-span-1 md:col-span-2 border-dashed border border-muted/70 p-4 rounded bg-white/50">
-                        <FormLabel className="text-muted-foreground">إرفاق شهادة مدرب إسعافات أولية (TOT)</FormLabel>
+                      <FormItem className="col-span-1 md:col-span-2 border-dashed border-2 border-slate-200 p-4 rounded-xl bg-white">
+                        <FormLabel className="text-slate-600 font-bold">إرفاق شهادة مدرب إسعافات أولية (TOT)</FormLabel>
                         <FormControl><input type="file" ref={totCertInputRef} className="hidden" accept="image/*,.pdf" onChange={handleTotCertUpload} disabled={isUploadingTot} /></FormControl>
                         <div className="flex items-center gap-3 mt-2">
-                          <Button type="button" variant="outline" size="sm" onClick={() => totCertInputRef.current?.click()} disabled={isUploadingTot}>
-                            {isUploadingTot ? "جاري الرفع..." : "رفع الشهادة"}
-                          </Button>
-                          {isUploadingTot ? (
-                            <span className="text-xs text-amber-600 font-bold animate-pulse">⏳ جاري الحفظ سحابياً...</span>
-                          ) : totCertPreview ? (
-                            <span className="text-xs text-green-700 font-bold">✅ تم الرفع والتجهيز</span>
-                          ) : null}
+                          <Button type="button" variant="outline" size="sm" onClick={() => totCertInputRef.current?.click()} disabled={isUploadingTot}>رفع الشهادة</Button>
+                          {isUploadingTot && <span className="text-xs text-amber-600 font-bold animate-pulse">⏳ جاري الحفظ سحابياً...</span>}
+                          {totCertPreview && !isUploadingTot && <span className="text-xs text-green-700 font-bold">✅ تم الرفع بنجاح</span>}
                         </div>
-                        {totCertPreview && !isUploadingTot && (
-                          <button type="button" className="text-xs text-destructive hover:underline mt-1 block" onClick={() => { setTotCertPreview(null); form.setValue("totCertificateUrl", ""); }}>حذف المرفق</button>
-                        )}
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="totYear" render={({ field }) => (
@@ -569,7 +594,7 @@ export default function Home() {
                     
                     <FormField control={form.control} name="otherPrograms" render={({ field }) => (
                         <FormItem className="col-span-1 md:col-span-2 pt-2 border-t mt-2">
-                          <FormLabel className="font-bold text-primary">هل أنت مدرب معتمد في برامج تخصصية أخرى؟</FormLabel>
+                          <FormLabel className="font-bold text-red-700">هل أنت مدرب معتمد في برامج تخصصية أخرى؟</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="اختر البرنامج الإضافي إن وجد" /></SelectTrigger></FormControl>
                             <SelectContent>{OTHER_PROGRAMS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
@@ -579,26 +604,18 @@ export default function Home() {
 
                     {otherPrograms && otherPrograms !== "لا" && (
                       <FormField control={form.control} name="otherCertificateUrl" render={({ field: { value: _v, ...field } }) => (
-                          <FormItem className="col-span-1 md:col-span-2 bg-white p-4 rounded-lg border-2 border-red-600 animate-in zoom-in-95 shadow-sm">
-                            <FormLabel className="text-red-700 font-bold flex items-center gap-2 text-base">رفع شهادة تخصص للبرنامج ({otherPrograms}) <span className="text-destructive">*</span></FormLabel>
+                          <FormItem className="col-span-1 md:col-span-2 bg-red-50/30 p-4 rounded-xl border-2 border-dashed border-red-200 animate-in zoom-in-95 shadow-sm">
+                            <FormLabel className="text-red-800 font-bold flex items-center gap-2 text-sm">رفع شهادة تخصص لبرنامج ({otherPrograms}) <span className="text-destructive">*</span></FormLabel>
                             <FormControl>
                               <div className="space-y-2">
                                 <input type="file" ref={otherCertInputRef} className="hidden" accept="image/*,.pdf" onChange={handleOtherCertUpload} disabled={isUploadingOther} />
                                 <div className="flex items-center gap-3 mt-2">
-                                  <Button type="button" variant="destructive" size="sm" onClick={() => otherCertInputRef.current?.click()} className="bg-red-600" disabled={isUploadingOther}>
-                                    {isUploadingOther ? "جاري الرفع..." : "اختيار الملف"}
-                                  </Button>
-                                  {isUploadingOther ? (
-                                    <span className="text-xs text-amber-600 font-bold animate-pulse">⏳ جاري الحفظ سحابياً...</span>
-                                  ) : otherCertPreview ? (
-                                    <span className="text-xs text-green-700 font-bold">✅ تم الرفع بنجاح</span>
-                                  ) : null}
+                                  <Button type="button" variant="outline" size="sm" onClick={() => otherCertInputRef.current?.click()} className="border-red-200 text-red-700" disabled={isUploadingOther}>اختيار الملف</Button>
+                                  {isUploadingOther && <span className="text-xs text-amber-600 font-bold animate-pulse">⏳ جاري الحفظ...</span>}
+                                  {otherCertPreview && !isUploadingOther && <span className="text-xs text-green-700 font-bold">✅ جاهز للرفع للفرع الرئيسي</span>}
                                 </div>
                               </div>
                             </FormControl>
-                            {otherCertPreview && !isUploadingOther && (
-                              <button type="button" className="text-xs text-destructive hover:underline mt-1 block" onClick={() => { setOtherCertPreview(null); form.setValue("otherCertificateUrl", ""); }}>حذف الشهادة التخصصية</button>
-                            )}
                             <FormMessage />
                           </FormItem>
                       )} />
@@ -609,7 +626,7 @@ export default function Home() {
 
               {/* الموقع والتوافر */}
               <section className="space-y-6">
-                <div className="border-b pb-2"><h3 className="text-xl font-bold text-primary">الوضع الميداني والتوافر الحركي</h3></div>
+                <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">الوضع الميداني والتوافر الحركي</h3></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField control={form.control} name="currentStatusInKhartoum" render={({ field }) => (
                     <FormItem><FormLabel>الوضع الجغرافي الحالي بالخرطوم <span className="text-destructive">*</span></FormLabel>
@@ -648,11 +665,11 @@ export default function Home() {
                 </div>
               </section>
 
-              {/* الالتزام القانوني واللوائح الداخيلية */}
+              {/* الالتزام القانوني واللوائح */}
               <section className="space-y-4">
-                <div className="border-b pb-2"><h3 className="text-xl font-bold text-primary">المصادقة والالتزام المؤسسي</h3></div>
-                <div className="bg-primary/5 border border-primary/20 p-5 rounded-lg space-y-4">
-                  <a href="/volunteer-manual.pdf" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold flex items-center gap-2 text-sm md:text-base">
+                <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">المصادقة والالتزام المؤسسي</h3></div>
+                <div className="bg-slate-50 border p-5 rounded-2xl space-y-4">
+                  <a href="/volunteer-manual.pdf" target="_blank" rel="noopener noreferrer" className="text-red-700 hover:underline font-semibold flex items-center gap-2 text-sm md:text-base">
                     اضغط هنا للإطلاع على دليل تنمية المتطوعين المعتمد بجمعية الهلال الأحمر السوداني (PDF)
                   </a>
                   <FormField control={form.control} name="agreedToTerms" render={({ field }) => (
@@ -665,18 +682,18 @@ export default function Home() {
                 </div>
               </section>
 
-              {/* زر الإرسال النهائي المحمي بالوقت وبحالة الـ Submission والـ Cloudinary Uploads */}
+              {/* زر الإرسال المحدث التفاعلي */}
               <div className="pt-4">
                 <Button 
                   type="submit" 
                   size="lg" 
-                  className="w-full text-lg h-14 bg-gradient-to-r from-[#A31D22] to-[#C1272D] hover:from-[#C1272D] hover:to-[#8B1519]" 
+                  className="w-full text-lg h-14 bg-gradient-to-r from-[#A31D22] to-[#C1272D] hover:from-[#C1272D] hover:to-[#8B1519] text-white font-black rounded-xl shadow-lg" 
                   disabled={form.formState.isSubmitting || timeLeft.ended || isUploadingPhoto || isUploadingTot || isUploadingOther}
                 >
                   {timeLeft.ended 
                     ? "انتهى زمن الحصر والتسجيل الرسمي" 
                     : (isUploadingPhoto || isUploadingTot || isUploadingOther)
-                      ? "يرجى الانتظار حتى اكتمال رفع الملفات سحابياً..."
+                      ? "يرجى الانتظار حتى اكتمال معالجة ورفع الملفات سحابياً..."
                       : form.formState.isSubmitting 
                         ? "جاري مراجعة وحفظ البيانات برمجياً..." 
                         : "تسجيل واعتماد البيانات الرقمية"
@@ -688,20 +705,17 @@ export default function Home() {
         </div>
       </div>
 
-      {/* الفوتر التاريخي */}
-      <footer className="mt-12 pb-10 text-center border-t border-gray-100 pt-8">
+      {/* الفوتر التاريخي المحدث لعام 2026 */}
+      <footer className="mt-12 pb-10 text-center border-t border-slate-200 pt-8">
         <div className="container mx-auto px-4 flex flex-col items-center gap-3">
-          <div className="flex flex-col items-center">
+          <div>
             <p className="text-gray-500 text-xs md:text-sm font-medium">جميع الحقوق محفوظة لدى <span className="text-[#C1272D] font-bold mx-1">جمعية الهلال الأحمر السوداني</span> &copy; 2026</p>
-            <p className="text-[11px] text-gray-500 font-bold mt-1">مكتب طوارئ محلية جبل أولياء</p>
+            <p className="text-[11px] text-gray-400 font-bold mt-1">مكتب طوارئ محلية جبل أولياء</p>
           </div>
-          <div className="mt-6 flex flex-col items-center gap-2">
+          <div className="mt-4 flex flex-col items-center gap-2">
             <div dir="ltr" className="flex items-center justify-center gap-1.5 text-[10px] md:text-xs text-gray-400 font-medium">
               <span>Developed with</span><span className="inline-block text-[#C1272D]">❤️</span><span>by</span><span className="text-gray-800 font-black tracking-tight">Loai & Hazim</span>
             </div>
-          </div>
-          <div className="bg-gray-50 px-4 py-1 rounded-full border border-gray-100 mt-2">
-            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Digital Transformation Unit</span>
           </div>
         </div>
       </footer>
