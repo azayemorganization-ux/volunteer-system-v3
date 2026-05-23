@@ -829,12 +829,13 @@ export default function Home() {
                 <span className="text-xl">⚖️</span>
                 <h3 className="text-lg font-black text-slate-900">المصادقة والمسؤولية المؤسسية</h3>
               </div>
-              
+
               <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4 shadow-inner-sm">
-                <a href="/volunteer-manual.pdf" target="_blank" rel="noopener noreferrer" className="text-[#C1272D] hover:text-[#8B1519] hover:underline font-bold flex items-center gap-2 text-sm transition-colors">
+                {/* تم تعديل الرابط هنا ليوجه للملف الجديد مباشرة */}
+                <a href="/guide.pdf" target="_blank" rel="noopener noreferrer" className="text-[#C1272D] hover:text-[#8B1519] hover:underline font-bold flex items-center gap-2 text-sm transition-colors">
                   📖 اضغط هنا لقراءة دليل تنمية المتطوعين المعتمد بجمعية الهلال الأحمر السوداني (ملف PDF رسمي)
                 </a>
-                
+
                 <FormField control={form.control} name="agreedToTerms" render={({ field }) => (
                   <FormItem className="flex flex-row items-start gap-3 space-y-0 pt-2 border-t border-slate-200/60">
                     <FormControl>
@@ -850,7 +851,7 @@ export default function Home() {
                 )} />
               </div>
             </section>
-
+            
             {/* زر الإرسال المحدث */}
             <div className="pt-2">
               <Button 
