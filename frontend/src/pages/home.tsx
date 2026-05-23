@@ -91,7 +91,7 @@ export default function Home() {
   const [isUploadingTot, setIsUploadingTot] = useState(false);
   const [isUploadingOther, setIsUploadingOther] = useState(false);
 
-  // حالات المعاينة والتحكم الديناميكي بالصورة الشخصية (Zoom & Pan)
+  // حالات المعاينة والتحكم بالصورة الشخصية (Zoom & Pan)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const [imageZoom, setImageZoom] = useState<number>(1);
@@ -108,7 +108,6 @@ export default function Home() {
 
   const SERVER_URL = "https://volunteer-system-v3.onrender.com";
 
-  // إدارة ظهور شاشة الترحيب الذكية عبر التخزين المحلي لمنع تكرارها عند التحديث
   const [showWelcome, setShowWelcome] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return !localStorage.getItem("srcs_welcome_dismissed");
@@ -188,7 +187,6 @@ export default function Home() {
   const otherPrograms = form.watch("otherPrograms");
   const currentStatusInKhartoum = form.watch("currentStatusInKhartoum");
 
-  // التقاط الصورة الأولية وفتح لوحة التعديل
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -207,7 +205,7 @@ export default function Home() {
     reader.readAsDataURL(file);
   };
 
-  // معالجة ودمج التعديلات (Zoom & Pan) داخل Canvas ومن ثم الرفع السحابي لـ Cloudinary
+  // معالجة مصفوفة التحويل لـ Canvas متطابقة بالبكسل مع الشاشة
   const handleApplyImageAdjustments = async () => {
     if (!imageElementRef.current || !rawImageSrc) return;
 
@@ -222,28 +220,43 @@ export default function Home() {
       ctx.fillRect(0, 0, 400, 400);
 
       ctx.save();
+      // 1. الانتقال لمنتصف الكانفاس الفعلي
       ctx.translate(200, 200);
+      // 2. تطبيق الزوم متطابقاً مع المعاينة
       ctx.scale(imageZoom, imageZoom);
-      ctx.translate(imagePanX, imagePanY);
+      
+      // 3. تحويل الإحداثيات من ريندر الشاشة (صندوق الـ 160px) إلى حجم الكانفاس المعتمد (400px)
+      const viewPortSize = 160;
+      const scaleFactor = 400 / viewPortSize;
+      ctx.translate(imagePanX * scaleFactor, imagePanY * scaleFactor);
 
       const img = imageElementRef.current;
-      const minDim = Math.min(img.naturalWidth, img.naturalHeight);
-      const sx = (img.naturalWidth - minDim) / 2;
-      const sy = (img.naturalHeight - minDim) / 2;
+      const imgRatio = img.naturalWidth / img.naturalHeight;
+      
+      let dWidth = 400;
+      let dHeight = 400;
+      
+      // حسابات الـ Object Cover لتغطية المساحة بالكامل بدون تشويه
+      if (imgRatio > 1) {
+        dWidth = 400 * imgRatio;
+      } else {
+        dHeight = 400 / imgRatio;
+      }
 
-      ctx.drawImage(img, sx, sy, minDim, minDim, -200, -200, 400, 400);
+      // رسم الصورة من المركز بالظبط
+      ctx.drawImage(img, -dWidth / 2, -dHeight / 2, dWidth, dHeight);
       ctx.restore();
 
-      const croppedBase64 = canvas.toDataURL("image/jpeg", 0.85);
+      const croppedBase64 = canvas.toDataURL("image/jpeg", 0.88);
       setPhotoPreview(croppedBase64);
 
       try {
         const cloudinaryUrl = await uploadToCloudinary(croppedBase64);
         form.setValue("photoUrl", cloudinaryUrl, { shouldValidate: true });
-        setRawImageSrc(null); // إغلاق لوحة التعديل بعد النجاح التام
-        toast({ title: "تم ضبط الصورة", description: "تم معالجة مظهر صورتك وحفظها سحابياً بنجاح." });
+        setRawImageSrc(null); // إغلاق لوحة التعديل التفاعلية بنجاح
+        toast({ title: "تم ضبط ومحاذاة الصورة", description: "تم حفظ الصورة بالشكل المتناسق سحابياً." });
       } catch (error) {
-        toast({ variant: "destructive", title: "خطأ في الرفع السحابي", description: "فشل حفظ الصورة المعدلة، يرجى المحاولة مجدداً." });
+        toast({ variant: "destructive", title: "خطأ سحابي", description: "فشل حفظ الصورة المعدلة، يرجى المحاولة مجدداً." });
         setPhotoPreview(null);
       } finally {
         setIsUploadingPhoto(false);
@@ -345,7 +358,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* الهيدر الرئيسي وتحديث العداد لـ 30 يونيو */}
       <div className="relative bg-gradient-to-r from-[#A31D22] via-[#C1272D] to-[#A31D22] text-white overflow-hidden py-8 px-4 border-b-4 border-yellow-500/20 shadow-xl">
         <div className="container max-w-6xl mx-auto relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="text-center md:text-right space-y-3 flex-1">
@@ -401,8 +413,12 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="container max-w-3xl mx-auto px-4 pt-5 flex flex-wrap gap-3 justify-end">
-        <Button variant="outline" size="sm" onClick={() => setLocation("/status")} className="border-red-600/30 text-red-700 hover:bg-red-50">
+      {/* 🚀 تم إرجاع صف الأزرار كاملاً وبداخله زر دخول الإدارة المفقود بنجاح */}
+      <div className="container max-w-3xl mx-auto px-4 pt-5 flex items-center justify-between gap-3">
+        <Button variant="ghost" size="sm" onClick={() => setLocation("/admin")} className="text-slate-400 hover:text-red-700 font-bold text-xs transition-colors">
+          🔐 دخول الإدارة
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setLocation("/status")} className="border-red-600/30 text-red-700 hover:bg-red-50 font-bold">
           مراجعة حالة الطلب
         </Button>
       </div>
@@ -445,7 +461,7 @@ export default function Home() {
                 </div>
               </section>
 
-              {/* الصورة الشخصية مع أداة التكبير والتحريك الاحترافية */}
+              {/* الصورة الشخصية مع معالجة وضبط الفروقات البكسلية بدقة */}
               <section className="space-y-4">
                 <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">الصورة الشخصية للبطاقة</h3></div>
                 <FormField control={form.control} name="photoUrl" render={({ field: { value: _v, ...field } }) => (
@@ -454,7 +470,6 @@ export default function Home() {
                     
                     <div className="flex flex-col gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
                       <div className="flex items-center gap-5">
-                        {/* مربع المعاينة الدائري النهائي المعتمد */}
                         <div className="w-24 h-24 rounded-full border-2 border-red-600 bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
                           {photoPreview ? (
                             <img src={photoPreview} alt="الصورة النهائية" className="w-full h-full object-cover" />
@@ -476,30 +491,26 @@ export default function Home() {
                         </div>
                       </div>
 
-                      {/* أداة التحكم والضبط الحيوي (Zoom & Pan Tool) */}
+                      {/* لوحة التحكم والضبط الحيوي المتطابقة مع الكانفاس برمجياً */}
                       {rawImageSrc && (
                         <div className="border-t pt-4 mt-2 space-y-4 bg-white p-4 rounded-xl border-dashed border-slate-300 animate-in zoom-in-95">
                           <p className="text-xs font-black text-slate-800 flex items-center gap-1">⚙️ لوحة ضبط وتوسيط الصورة الشخصية</p>
                           
                           <div className="flex flex-col items-center justify-center gap-4 md:flex-row">
-                            {/* الدائرة الحية للمعاينة أثناء التحريك والتحجيم */}
-                            <div className="w-32 h-32 rounded-full border-4 border-emerald-500 overflow-hidden relative bg-slate-100 shrink-0 shadow-md">
+                            {/* نافذة المعاينة المحددة بـ 160px لضبط الحسابات الرياضية بدقة */}
+                            <div className="w-40 h-40 rounded-full border-4 border-emerald-500 overflow-hidden relative bg-slate-100 shrink-0 shadow-md">
                               <img 
                                 ref={imageElementRef}
                                 src={rawImageSrc} 
-                                alt="تحريج حي" 
-                                className="absolute max-w-none origin-center"
+                                alt="تحريك حي" 
+                                className="w-full h-full object-cover origin-center"
                                 style={{
-                                  width: "100%",
-                                  height: "100%",
-                                  objectFit: "contain",
                                   transform: `scale(${imageZoom}) translate(${imagePanX}px, ${imagePanY}px)`,
                                   transition: "none"
                                 }}
                               />
                             </div>
 
-                            {/* السلايدرز للتحكم الكامل المتوافق مع شاشات الهواتف */}
                             <div className="w-full flex-1 space-y-3 text-xs">
                               <div className="space-y-1">
                                 <div className="flex justify-between font-bold text-slate-600"><span>🔍 حجم وتكبير الصورة:</span><span>{imageZoom.toFixed(1)}x</span></div>
@@ -507,11 +518,11 @@ export default function Home() {
                               </div>
                               <div className="space-y-1">
                                 <div className="flex justify-between font-bold text-slate-600"><span>↔️ تحريك يمين / يسار:</span><span>{imagePanX}px</span></div>
-                                <input type="range" min="-100" max="100" step="1" value={imagePanX} onChange={(e) => setImagePanX(parseInt(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-700" />
+                                <input type="range" min="-80" max="80" step="1" value={imagePanX} onChange={(e) => setImagePanX(parseInt(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-700" />
                               </div>
                               <div className="space-y-1">
                                 <div className="flex justify-between font-bold text-slate-600"><span>↕️ تحريك أعلى / أسفل:</span><span>{imagePanY}px</span></div>
-                                <input type="range" min="-100" max="100" step="1" value={imagePanY} onChange={(e) => setImagePanY(parseInt(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-700" />
+                                <input type="range" min="-80" max="80" step="1" value={imagePanY} onChange={(e) => setImagePanY(parseInt(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-700" />
                               </div>
                             </div>
                           </div>
@@ -519,7 +530,7 @@ export default function Home() {
                           <div className="flex justify-end gap-2 pt-2">
                             <Button type="button" variant="ghost" size="sm" className="text-xs text-slate-500" onClick={() => setRawImageSrc(null)}>إلغاء</Button>
                             <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold" onClick={handleApplyImageAdjustments} disabled={isUploadingPhoto}>
-                              {isUploadingPhoto ? "جاري المعالجة والرفع سحابياً..." : "✅ اعتماد الصورة الموزونة"}
+                              {isUploadingPhoto ? "جاري المعالجة والرفع..." : "✅ اعتماد الصورة الموزونة"}
                             </Button>
                           </div>
                         </div>
@@ -530,7 +541,7 @@ export default function Home() {
                 )} />
               </section>
 
-              {/* تحديث المسمى للوحدة الإدارية */}
+              {/* حقل الوحدة الإدارية المحدث */}
               <section className="space-y-4">
                 <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">الوحدة التطوعية المحلية</h3></div>
                 <FormField control={form.control} name="unitId" render={({ field }) => (
@@ -551,7 +562,7 @@ export default function Home() {
                 )} />
               </section>
 
-              {/* قسم التدريب المعتمد وإزالة ألوان الإطار الشاذة */}
+              {/* قسم التدريب المعتمد */}
               <section className="space-y-6">
                 <div className="border-b pb-2"><h3 className="text-xl font-bold text-red-700">السجل التدريبي المعتمد (TOT)</h3></div>
                 <FormField control={form.control} name="isTotTrainer" render={({ field }) => (
@@ -682,7 +693,7 @@ export default function Home() {
                 </div>
               </section>
 
-              {/* زر الإرسال المحدث التفاعلي */}
+              {/* زر الإرسال المحدث */}
               <div className="pt-4">
                 <Button 
                   type="submit" 
@@ -705,7 +716,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* الفوتر التاريخي المحدث لعام 2026 */}
       <footer className="mt-12 pb-10 text-center border-t border-slate-200 pt-8">
         <div className="container mx-auto px-4 flex flex-col items-center gap-3">
           <div>
