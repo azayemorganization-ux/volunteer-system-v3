@@ -41,6 +41,7 @@ app.use(async (req, res, next) => {
     password: sessionSecret || "a_very_long_secure_password_32_characters_long",
     ttl: 60 * 60 * 24 * 7,
     cookieOptions: {
+      // إذا كنت في برودكشن، اجبرها تكون secure
       secure: process.env.NODE_ENV === "production", 
       sameSite: "none",
       httpOnly: true,
@@ -56,40 +57,6 @@ app.use(async (req, res, next) => {
     next(error);
   }
 });
-
-
-// 🛑 🛑 🛑 [بوابة قفل الموقع والسرداب السري - النسخة المستقرة] 🛑 🛑 🛑
-
-const IS_MAINTENANCE = true; // 👈 خليها true لقفل الموقع، و false لفتحه مجدداً
-const SECRET_KEY = "jabal";    // 🤫 مفتاح السرداب السري
-
-app.use((req, res, next) => {
-  // 1. لو وضع الصيانة واقف، مرر الطلب طبيعي
-  if (!IS_MAINTENANCE) return next(); 
-
-  // 2. تمرير طلبات الـ OPTIONS (CORS) عشان الفرونت إند ما يـجمد
-  if (req.method === "OPTIONS") return next();
-
-  // 3. تأمين الـ Health Check بمرونة كاملة لمنع سقوط السيرفر في ريندر
-  const currentPath = req.path.replace(/\/$/, ""); // إزالة أي شرطة مائلة في النهاية للضمان
-  if (currentPath === "" || currentPath === "/api/health") {
-    return next();
-  }
-
-  // 4. السرداب السري (متوافق مع TypeScript بدون أخطاء)
-  if (req.query && req.query.secret && String(req.query.secret) === SECRET_KEY) {
-    return next();
-  }
-
-  // 5. قفل الباب في وش المتطوعين وإرجاع رسالة صيانة نظيفة برقم 503
-  return res.status(503).json({
-    maintenance: true,
-    message: "⚠️ النظام تحت الصيانة والتحديث المؤقت الآن.. سيعود العمل قريباً جداً يا أبطال."
-  });
-});
-
-// 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑
-
 
 app.use("/api", router);
 
