@@ -338,7 +338,7 @@ export default function StatusCheck() {
         }
       });
 
-      const response = await fetch(`${SERVER_URL}/api/volunteers/${currentId}`, {
+const response = await fetch(`${SERVER_URL}/api/volunteers/resubmit/${currentId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(cleanData),
