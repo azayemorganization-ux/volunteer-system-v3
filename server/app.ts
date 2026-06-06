@@ -58,6 +58,34 @@ app.use(async (req, res, next) => {
   }
 });
 
+
+// 🛑 🛑 🛑 [بوابة قفل الموقع والسرداب السري] 🛑 🛑 🛑
+
+const IS_MAINTENANCE = true; // 👈 خليها true عشان تقفل السيرفر، ولما تنتهي رجعها false
+const SECRET_KEY = "jabal";    // 🤫 الكلمة السرية بتاعت السرداب الخص بك
+
+app.use((req, res, next) => {
+  // 1. لو وضع الصيانة واقف (false)، مشّي الناس طبيعي
+  if (!IS_MAINTENANCE) return next(); 
+
+  // 2. السماح بروابط النظام الأساسية عشان السيرفر ما يقع في ريندر
+  if (req.url === "/" || req.url === "/api/health") return next();
+
+  // 3. 🤫 السرداب السري: لو أنت ضفت الكلمة السرية في نهاية أي رابط، السيرفر حيفتح ليك ليك أنت بس!
+  if (req.query.secret === SECRET_KEY) {
+    return next();
+  }
+
+  // 4. قفل السيرفر عن أي متطوع تاني وإرجاع رسالة الصيانة
+  return res.status(503).json({
+    maintenance: true,
+    message: "⚠️ النظام تحت الصيانة والتحديث المؤقت الآن.. سيعود العمل قريباً جداً يا أبطال."
+  });
+});
+
+// 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑 🛑
+
+
 app.use("/api", router);
 
 app.get("/api/health", async (_req, res) => {
