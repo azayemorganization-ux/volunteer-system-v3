@@ -93,6 +93,18 @@ export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const [admin, setAdmin] = useState<any>(null);
   const [adminLoading, setAdminLoading] = useState(true);
+  const [pendingCount, setPendingCount] = useState<number>(0); // 🔴 حالة عداد الطلبات المعلقة الجديد
+
+  // دالة ذكية لتحديث كاونتر الطلبات المعلقة في التبويبات بالوقت الفعلي
+  const refreshPendingCount = () => {
+    fetchStats()
+      .then(s => {
+        if (s && typeof s.pending === 'number') {
+          setPendingCount(s.pending);
+        }
+      })
+      .catch(() => console.log("فشل تحديث كاونتر المعلقات الزمني"));
+  };
 
   useEffect(() => {
     // التحقق أولاً من وجود مفتاح العبور المحلي لتفادي مشاكل الـ Cookies عابرة القارات
@@ -132,6 +144,13 @@ export default function AdminDashboard() {
         .finally(() => setAdminLoading(false));
     }
   }, [setLocation]);
+
+  // جلب العداد فور اعتماد الأدمن بنجاح
+  useEffect(() => {
+    if (admin) {
+      refreshPendingCount();
+    }
+  }, [admin]);
 
   const handleLogout = async () => {
     try {
@@ -178,15 +197,25 @@ export default function AdminDashboard() {
         <Tabs defaultValue="stats" className="space-y-6">
           <TabsList className="bg-white border shadow-sm p-1">
             <TabsTrigger value="stats">الإحصائيات</TabsTrigger>
-            <TabsTrigger value="pending">الطلبات المعلقة</TabsTrigger>
+            
+            {/* 🎯 تعديل التبويب لإضافة العداد الأحمر النابض الصغير */}
+            <TabsTrigger value="pending" className="flex items-center gap-2 relative">
+              الطلبات المعلقة
+              {pendingCount > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white animate-pulse">
+                  {pendingCount}
+                </span>
+              )}
+            </TabsTrigger>
+            
             <TabsTrigger value="directory">دليل المتطوعين</TabsTrigger>
             {isSuperadmin && <TabsTrigger value="units">إدارة الوحدات</TabsTrigger>}
             {isSuperadmin && <TabsTrigger value="admins">إدارة المشرفين</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="stats"><StatsTab /></TabsContent>
-          <TabsContent value="pending"><PendingTab isSuperadmin={isSuperadmin} role={admin?.role} /></TabsContent>
-          <TabsContent value="directory"><DirectoryTab isSuperadmin={isSuperadmin} /></TabsContent>
+          <TabsContent value="pending"><PendingTab isSuperadmin={isSuperadmin} role={admin?.role} onCountChange={refreshPendingCount} /></TabsContent>
+          <TabsContent value="directory"><DirectoryTab isSuperadmin={isSuperadmin} onCountChange={refreshPendingCount} /></TabsContent>
           {isSuperadmin && <TabsContent value="units"><UnitsTab /></TabsContent>}
           {isSuperadmin && <TabsContent value="admins"><AdminsTab /></TabsContent>}
         </Tabs>
@@ -521,7 +550,7 @@ function ProfileDialog({ volunteer, open, onClose, isSuperadmin, onRefresh }: {
 
 // ─── Pending Tab ──────────────────────────────────────────────────────────────
 
-function PendingTab({ isSuperadmin, role }: { isSuperadmin: boolean; role?: string }) {
+function PendingTab({ isSuperadmin, role, onCountChange }: { isSuperadmin: boolean; role?: string; onCountChange?: () => void }) {
   const { toast } = useToast();
   const [selected, setSelected] = useState<any | null>(null);
   const [volunteers, setVolunteers] = useState<any[]>([]);
@@ -533,7 +562,10 @@ function PendingTab({ isSuperadmin, role }: { isSuperadmin: boolean; role?: stri
   const loadPendingData = () => {
     setIsLoading(true);
     fetchVolunteers({ status: "pending" })
-      .then(setVolunteers)
+      .then((data) => {
+        setVolunteers(data);
+        if (onCountChange) onCountChange(); // 🚀 تحديث العداد الرئيسي فور جلب البيانات بنجاح
+      })
       .finally(() => setIsLoading(false));
   };
 
@@ -657,7 +689,7 @@ function PendingTab({ isSuperadmin, role }: { isSuperadmin: boolean; role?: stri
 
 // ─── Directory Tab ────────────────────────────────────────────────────────────
 
-function DirectoryTab({ isSuperadmin }: { isSuperadmin: boolean }) {
+function DirectoryTab({ isSuperadmin, onCountChange }: { isSuperadmin: boolean; onCountChange?: () => void }) {
   const { toast } = useToast();
   const [unitFilter, setUnitFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -674,7 +706,10 @@ function DirectoryTab({ isSuperadmin }: { isSuperadmin: boolean }) {
       search: searchQuery || undefined,
       status: statusFilter === "all" ? undefined : statusFilter,
     })
-    .then(setVolunteers)
+    .then((data) => {
+      setVolunteers(data);
+      if (onCountChange) onCountChange(); // 🚀 تحديث العداد الرئيسي إذا تم اعتماد معلق من هنا
+    })
     .finally(() => setIsLoading(false));
   };
 
