@@ -41,7 +41,6 @@ app.use(async (req, res, next) => {
     password: sessionSecret || "a_very_long_secure_password_32_characters_long",
     ttl: 60 * 60 * 24 * 7,
     cookieOptions: {
-      // إذا كنت في برودكشن، اجبرها تكون secure
       secure: process.env.NODE_ENV === "production", 
       sameSite: "none",
       httpOnly: true,
@@ -59,24 +58,30 @@ app.use(async (req, res, next) => {
 });
 
 
-// 🛑 🛑 🛑 [بوابة قفل الموقع والسرداب السري] 🛑 🛑 🛑
+// 🛑 🛑 🛑 [بوابة قفل الموقع والسرداب السري - النسخة المستقرة] 🛑 🛑 🛑
 
-const IS_MAINTENANCE = true; // 👈 خليها true عشان تقفل السيرفر، ولما تنتهي رجعها false
-const SECRET_KEY = "jabal";    // 🤫 الكلمة السرية بتاعت السرداب الخص بك
+const IS_MAINTENANCE = true; // 👈 خليها true لقفل الموقع، و false لفتحه مجدداً
+const SECRET_KEY = "jabal";    // 🤫 مفتاح السرداب السري
 
 app.use((req, res, next) => {
-  // 1. لو وضع الصيانة واقف (false)، مشّي الناس طبيعي
+  // 1. لو وضع الصيانة واقف، مرر الطلب طبيعي
   if (!IS_MAINTENANCE) return next(); 
 
-  // 2. السماح بروابط النظام الأساسية عشان السيرفر ما يقع في ريندر
-  if (req.url === "/" || req.url === "/api/health") return next();
+  // 2. تمرير طلبات الـ OPTIONS (CORS) عشان الفرونت إند ما يـجمد
+  if (req.method === "OPTIONS") return next();
 
-  // 3. 🤫 السرداب السري: لو أنت ضفت الكلمة السرية في نهاية أي رابط، السيرفر حيفتح ليك ليك أنت بس!
-  if (req.query.secret === SECRET_KEY) {
+  // 3. تأمين الـ Health Check بمرونة كاملة لمنع سقوط السيرفر في ريندر
+  const currentPath = req.path.replace(/\/$/, ""); // إزالة أي شرطة مائلة في النهاية للضمان
+  if (currentPath === "" || currentPath === "/api/health") {
     return next();
   }
 
-  // 4. قفل السيرفر عن أي متطوع تاني وإرجاع رسالة الصيانة
+  // 4. السرداب السري (متوافق مع TypeScript بدون أخطاء)
+  if (req.query && req.query.secret && String(req.query.secret) === SECRET_KEY) {
+    return next();
+  }
+
+  // 5. قفل الباب في وش المتطوعين وإرجاع رسالة صيانة نظيفة برقم 503
   return res.status(503).json({
     maintenance: true,
     message: "⚠️ النظام تحت الصيانة والتحديث المؤقت الآن.. سيعود العمل قريباً جداً يا أبطال."
