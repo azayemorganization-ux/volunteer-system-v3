@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
 import { IDCard, CardScreenshotPopup, type VolunteerCardData } from "./success";
 import { checkVolunteerStatus } from "@/lib/api";
 
@@ -306,27 +305,83 @@ export default function StatusCheck() {
     }
   };
 
-  // إرسال البيانات المحدثة (PUT) وإعادة فحص الحالة تلقائياً
+  // إرسال البيانات المحدثة (PUT) وإعادة فحص الحالة تلقائياً - نسخة مؤمنة ومطورة بالكامل للجوال
   const onEditSubmit = async (data: FormValues) => {
     if (!result) return;
+    
+    // محاولة جلب الـ id من أي مسمى محتمل من الـ Backend لضمان عدم إرسال مسار ناقص
+    const currentId = result.id || (result as any)._id || (result as any).volunteerId;
+
+    if (!currentId) {
+      toast({ 
+        variant: "destructive", 
+        title: "خطأ في معرف الطلب", 
+        description: "لم نتمكن من تحديد رقم المعرف التلقائي للطلب، يرجى تحديث الصفحة وإعادة المحاولة." 
+      });
+      return;
+    }
+
     try {
-      const response = await fetch(`${SERVER_URL}/api/volunteers/${result.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, isTotTrainer: data.isTotTrainer === "true" }),
+      // تجهيز وتنظيف الكائن لإرضاء Schema قاعدة البيانات والـ Constraints في الباك إند
+      const cleanData: Record<string, any> = {
+        ...data,
+        unitId: Number(data.unitId),
+        // إرسال الحقل بالشكلين (Boolean و String) لتأمين الاستقبال أياً كانت طريقة بنائه في الباك إند
+        isTotTrainer: data.isTotTrainer === "true" ? true : false,
+        isTotTrainerStr: data.isTotTrainer
+      };
+
+      // تحويل أي نص فارغ "" إلى null لحماية السيرفر من أخطاء الـ Validation والـ Foreign Keys
+      Object.keys(cleanData).forEach((key) => {
+        if (cleanData[key] === "") {
+          cleanData[key] = null;
+        }
       });
 
-      const resData = await response.json();
-      if (response.ok) {
-        toast({ title: "تم تحديث طلبك بنجاح", description: "تمت إعادة إرسال البيانات والمستندات بنجاح للمراجعة الفورية." });
-        setIsEditing(false);
-        // إعادة الفحص تلقائياً لإظهار الحالة الجديدة (معلق / قيد المراجعة)
-        await handleCheck();
-      } else {
-        throw new Error(resData.error || "حدث خطأ أثناء معالجة التحديث");
+      const response = await fetch(`${SERVER_URL}/api/volunteers/${currentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cleanData),
+      });
+
+      // لو السيرفر ما رجع كود نجاح (مثلاً رجع 500 ورجع معاه صفحة HTML الافتراضية)
+      if (!response.ok) {
+        const errorText = await response.text();
+        
+        // فحص ما إذا كانت الاستجابة صفحة مكسورة، لنستخرج نص الخطأ الصافي ونعرضه في الـ Toast
+        if (errorText.startsWith("<!")) {
+          const match = errorText.match(/Error: (.*?)(<br>|<\/pre>)/);
+          const cleanServerMsg = match ? match[1] : `خطأ داخلي في السيرفر (Status Code: ${response.status})`;
+          throw new Error(cleanServerMsg);
+        }
+        
+        // لو النص خطأ عادي نقرأه مباشرة
+        try {
+          const parsedError = JSON.parse(errorText);
+          throw new Error(parsedError.error || parsedError.message || "حدث خطأ غير متوقع في السيرفر");
+        } catch {
+          throw new Error(errorText || "فشل معالجة الطلب في السيرفر");
+        }
       }
+
+      // إذا نجحت العملية نقرأ الـ JSON بسلام
+      await response.json();
+      
+      toast({ 
+        title: "تم تحديث طلبك بنجاح", 
+        description: "تمت إعادة إرسال البيانات والمستندات بنجاح للمراجعة الفورية من قبل مكتب الطوارئ." 
+      });
+      
+      setIsEditing(false);
+      // إعادة فحص الحالة تلقائياً لمزامنة الشاشة مع الوضع الجديد (معلق / قيد المراجعة)
+      await handleCheck();
+
     } catch (err: any) {
-      toast({ variant: "destructive", title: "فشل تحديث البيانات", description: err.message });
+      toast({ 
+        variant: "destructive", 
+        title: "فشل تحديث البيانات", 
+        description: err.message || "عذراً، تعذر الاتصال بالسيرفر حالياً. يرجى التحقق من الشبكة." 
+      });
     }
   };
 
@@ -419,7 +474,7 @@ export default function StatusCheck() {
                 </div>
               </div>
               <Button onClick={handleStartEditing} className="w-full bg-[#C1272D] hover:bg-[#8B1519] text-white font-black h-12 rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
-                📝 فتح تعديل البيانات وإعادة الإرسال طويلاً
+                📝 فتح تعديل البيانات وإعادة الإرسال
               </Button>
             </div>
           )}
@@ -451,7 +506,7 @@ export default function StatusCheck() {
         </div>
       )}
 
-      {/* نموذج التعديل المتكامل (يفتح فقط إذا كان الطلب مرفوضاً وضغط المتطوع على الزر) */}
+      {/* نموذج التعديل المتكامل */}
       {isEditing && result && (
         <div className="w-full max-w-2xl bg-white border rounded-2xl shadow-xl p-6 md:p-8 space-y-6 mt-4 animate-in zoom-in-95 duration-300">
           <div className="border-b pb-3 flex items-center justify-between">
@@ -615,7 +670,7 @@ export default function StatusCheck() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="currentStatusInKhartoum" render={({ field }) => (
                     <FormItem><FormLabel className="text-xs font-bold text-slate-700">موقع تواجدك الحالي بدقة *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="bg-white rounded-xl"><SelectValue placeholder="اختر موقعك" /></SelectTrigger></FormControl><SelectContent><SelectItem value="موجود حالياً">موجود حالياً داخل الولاية</SelectItem><SelectItem value="خ خارج الخرطوم">في الولايات - خارج ولاية الخرطوم</SelectItem><SelectItem value="مسافر خارج البلاد">خارج السودان تماماً</SelectItem></SelectContent></Select><FormMessage className="text-xs" />
+                      <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="bg-white rounded-xl"><SelectValue placeholder="اختر موقعك" /></SelectTrigger></FormControl><SelectContent><SelectItem value="موجود حالياً">موجود حالياً داخل الولاية</SelectItem><SelectItem value="في الولايات - خارج ولاية الخرطوم">في الولايات - خارج ولاية الخرطوم</SelectItem><SelectItem value="مسافر خارج البلاد">خارج السودان تماماً</SelectItem></SelectContent></Select><FormMessage className="text-xs" />
                     </FormItem>
                   )} />
                   {currentStatusInKhartoum && currentStatusInKhartoum !== "موجود حالياً" && (
