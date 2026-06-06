@@ -1,13 +1,13 @@
 import { Router } from "express";
-import { eq, and, or, ilike, inArray, desc } from "drizzle-orm";
+import { eq, and, or, ilike, inArray, desc, ne } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { volunteersTable, unitsTable, insertVolunteerSchema } from "../db/schema.js";
 
 const router = Router();
 
 // --- 1. دالة مساعدة لتحديد الوحدات المسموح بها للمشرفين (تم تصليحها لتفهم المصفوفات والنصوص) ---
-function getAdminUnitCondition(req) {
-  const admin = req.session.admin;
+function getAdminUnitCondition(req: any) {
+  const admin = (req as any).session?.admin;
   if (!admin) return eq(volunteersTable.id, -1); // شرط مستحيل للحماية لو مافي سيشن
 
   const role = admin.role;
@@ -46,17 +46,17 @@ function generateVolunteerId() {
 }
 
 // --- 3. دوال الحماية والتحقق من الصلاحيات ---
-function requireAdmin(req, res) {
-  if (!req.session || !req.session.admin) {
+function requireAdmin(req: any, res: any) {
+  if (!(req as any).session || !(req as any).session.admin) {
     res.status(401).json({ error: "غير مصرح، الرجاء تسجيل الدخول أولاً" });
     return false;
   }
   return true;
 }
 
-function requireSuperAdmin(req, res) {
+function requireSuperAdmin(req: any, res: any) {
   if (!requireAdmin(req, res)) return false;
-  if (req.session.admin.role !== "superadmin") {
+  if ((req as any).session.admin.role !== "superadmin") {
     res.status(403).json({ error: "هذا الإجراء متاح للمسؤول الرئيسي فقط" });
     return false;
   }
@@ -66,7 +66,7 @@ function requireSuperAdmin(req, res) {
 // ========================================================
 // 4. المسار العام للاستعلام عبر الـ QR المطبوع على البطاقة (Public)
 // ========================================================
-router.get("/public/:id", async (req, res) => {
+router.get("/public/:id", async (req: any, res: any) => {
   try {
     const { id } = req.params;
     const decodedId = decodeURIComponent(id).trim();
@@ -107,7 +107,7 @@ router.get("/public/:id", async (req, res) => {
 // ========================================================
 // 5. مسار الأدمن لجلب وعرض قائمة المتطوعين مع الفلاتر الذكية
 // ========================================================
-router.get("/", async (req, res) => {
+router.get("/", async (req: any, res: any) => {
   if (!requireAdmin(req, res)) return;
 
   try {
@@ -155,7 +155,7 @@ router.get("/", async (req, res) => {
 // ========================================================
 // 6. مسار الإحصائيات التفصيلية للوحة التحكم (Stats)
 // ========================================================
-router.get("/stats", async (req, res) => {
+router.get("/stats", async (req: any, res: any) => {
   if (!requireAdmin(req, res)) return;
 
   try {
@@ -177,7 +177,7 @@ router.get("/stats", async (req, res) => {
     let pending = allVolunteers.filter(v => v.status === "pending").length;
     let rejected = allVolunteers.filter(v => v.status === "rejected").length;
 
-    const unitCounts = {};
+    const unitCounts: Record<string, number> = {};
     allVolunteers.filter(v => v.status === "approved").forEach(v => {
       const name = v.unitName || "غير محدد";
       unitCounts[name] = (unitCounts[name] || 0) + 1;
@@ -198,7 +198,7 @@ router.get("/stats", async (req, res) => {
 // ========================================================
 // 7. استعلام المتطوع عن حالة طلبه باستخدام الرقم الوطني (Public)
 // ========================================================
-router.get("/check-status", async (req, res) => {
+router.get("/check-status", async (req: any, res: any) => {
   const { nationalId } = req.query;
 
   if (!nationalId) {
@@ -237,7 +237,7 @@ router.get("/check-status", async (req, res) => {
 // ========================================================
 // 8. تسجيل استمارة متطوع جديد بالكامل (Public)
 // ========================================================
-router.post("/", async (req, res) => {
+router.post("/", async (req: any, res: any) => {
   const parsed = insertVolunteerSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "الرجاء مراجعة البيانات المدخلة وإكمال الحقول المطلوبة" });
@@ -299,7 +299,7 @@ router.post("/", async (req, res) => {
 // ========================================================
 // 9. عمليات المراجعة المحصنة: الاعتماد والرفض والحذف
 // ========================================================
-router.post("/:id/approve", async (req, res) => {
+router.post("/:id/approve", async (req: any, res: any) => {
   if (!requireAdmin(req, res)) return;
 
   try {
@@ -307,7 +307,7 @@ router.post("/:id/approve", async (req, res) => {
     const decodedId = decodeURIComponent(id).trim();
     const isNumber = !isNaN(Number(decodedId));
 
-    const adminName = req.session.admin?.username || "مشرف نظام";
+    const adminName = (req as any).session.admin?.username || "مشرف نظام";
 
     const whereCondition = isNumber
       ? or(eq(volunteersTable.volunteerId, decodedId), eq(volunteersTable.id, Number(decodedId)))
@@ -335,7 +335,7 @@ router.post("/:id/approve", async (req, res) => {
   }
 });
 
-router.post("/:id/reject", async (req, res) => {
+router.post("/:id/reject", async (req: any, res: any) => {
   if (!requireAdmin(req, res)) return;
 
   try {
@@ -344,7 +344,7 @@ router.post("/:id/reject", async (req, res) => {
     const decodedId = decodeURIComponent(id).trim();
     const isNumber = !isNaN(Number(decodedId));
 
-    const adminName = req.session.admin?.username || "مشرف نظام";
+    const adminName = (req as any).session.admin?.username || "مشرف نظام";
 
     const whereCondition = isNumber
       ? or(eq(volunteersTable.volunteerId, decodedId), eq(volunteersTable.id, Number(decodedId)))
@@ -372,7 +372,7 @@ router.post("/:id/reject", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", async (req: any, res: any) => {
   if (!requireSuperAdmin(req, res)) return;
 
   try {
@@ -398,6 +398,96 @@ router.delete("/:id", async (req, res) => {
   } catch (err) {
     console.error("Delete API Error Log:", err);
     res.status(500).json({ error: "فشل حذف سجل المتطوع" });
+  }
+});
+
+// ========================================================
+// 10. تعديل وإعادة إرسال الاستمارة المرفوضة من المتطوع (Public)
+// ========================================================
+router.put("/resubmit/:id", async (req: any, res: any) => {
+  const { id } = req.params;
+  const parsed = insertVolunteerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "الرجاء مراجعة البيانات المدخلة وإكمال الحقول المطلوبة" });
+    return;
+  }
+
+  try {
+    const d = parsed.data;
+    const targetId = Number(id);
+
+    if (isNaN(targetId)) {
+      res.status(400).json({ error: "معرف المتطوع غير صحيح" });
+      return;
+    }
+
+    // 1. فحص وجود السجل والتأكد من أنه مرفوض حالياً
+    const existing = await db
+      .select()
+      .from(volunteersTable)
+      .where(eq(volunteersTable.id, targetId))
+      .limit(1);
+
+    if (existing.length === 0) {
+      res.status(404).json({ error: "عفواً، هذا السجل غير موجود في النظام" });
+      return;
+    }
+
+    if (existing[0].status !== "rejected") {
+      res.status(400).json({ error: "عذراً، يسمح بالتعديل فقط للطلبات المرفوضة حالياً" });
+      return;
+    }
+
+    // 2. التحقق من أن الاسم أو الرقم الوطني الجديد ما مكرر مع شخص *آخر* في السيستم
+    const duplicate = await db
+      .select()
+      .from(volunteersTable)
+      .where(
+        and(
+          ne(volunteersTable.id, targetId),
+          or(
+            eq(volunteersTable.fullName, d.fullName.trim()),
+            eq(volunteersTable.nationalId, d.nationalId.trim())
+          )
+        )
+      )
+      .limit(1);
+
+    if (duplicate.length > 0) {
+      res.status(400).json({ error: "عذراً، هذا الاسم أو الرقم الوطني مسجل بالفعل لشخص آخر في النظام" });
+      return;
+    }
+
+    // 3. تحديث السجل وإعادته لحالة المراجعة
+    const [updatedVolunteer] = await db
+      .update(volunteersTable)
+      .set({
+        fullName: d.fullName.trim(),
+        nationalId: d.nationalId.trim(),
+        phone: d.phone.trim(),
+        whatsapp: d.whatsapp ? d.whatsapp.trim() : null,
+        yearOfVolunteering: d.yearOfVolunteering,
+        unitId: Number(d.unitId),
+        photoUrl: d.photoUrl || null,
+        isTotTrainer: d.isTotTrainer,
+        totYear: d.totYear,
+        totCertificateUrl: d.totCertificateUrl || null,
+        otherCertificateUrl: d.otherCertificateUrl || null,
+        lastFirstAidRefresher: d.lastFirstAidRefresher,
+        otherPrograms: d.otherPrograms,
+        currentStatusInKhartoum: d.currentStatusInKhartoum,
+        expectedReturnTime: d.expectedReturnTime,
+        availabilityLevel: d.availabilityLevel,
+        status: "pending",          // 🔄 إرجاعه قيد المراجعة
+        rejectionReason: null,     // 🧹 تصفير سبب الرفض القديم
+      })
+      .where(eq(volunteersTable.id, targetId))
+      .returning();
+
+    res.json(updatedVolunteer);
+  } catch (error) {
+    console.error("Resubmit API Error:", error);
+    res.status(500).json({ error: "حدث خطأ داخلي أثناء تحديث الاستمارة" });
   }
 });
 
