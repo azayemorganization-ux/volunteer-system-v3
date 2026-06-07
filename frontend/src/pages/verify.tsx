@@ -1,208 +1,215 @@
 import { useState, useEffect, useRef } from "react";
-import { Html5QrcodeScanner, Html5Qrcode } from "html5-qrcode";
-import { useLocation } from "wouter"; // التعديل الذهبي المتوافق مع مشروعك الحالي
-
-type ScanMethod = "camera" | "file" | "manual";
+import { useLocation } from "wouter";
+import { Html5Qrcode } from "html5-qrcode";
 
 export default function AdvancedScannerPage() {
-  const [, setLocation] = useLocation(); // استخدام راوتر مشروعك الأساسي بالتوجيه السلس
-  const [method, setMethod] = useState<ScanMethod>("camera");
-  const [digits, setDigits] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [scanStatus, setScanStatus] = useState<{ text: string; isError: boolean } | null>(null);
+  const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<"camera" | "file" | "manual">("file");
+  const [idInput, setIdInput] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. تشغيل ماسح الكاميرا الـ Live
   useEffect(() => {
-    if (method !== "camera") return;
+    setErrorMessage(null);
+  }, [activeTab]);
 
-    const scanner = new Html5QrcodeScanner(
-      "camera-reader",
-      { fps: 15, qrbox: { width: 220, height: 220 } },
-      false
-    );
-
-    scanner.render(
-      (decodedText) => {
-        scanner.clear();
-        triggerSuccessEffect(decodedText);
-      },
-      (error) => { /* فحص صامت في الخلفية */ }
-    );
-
-    return () => {
-      scanner.clear().catch((err) => console.error("بريك الكاميرا:", err));
-    };
-  }, [method]);
-
-  // 🔥 الدالة الموحدة لمعالجة وتوجيه كل خيارات الفحص لنفس الرابط الداخلي
-  const triggerSuccessEffect = (scannedOutput: string) => {
-    setIsProcessing(true);
-    setScanStatus({ text: "🎉 تم التحقق الرقمي بنجاح! جاري الانتقال لملف المتطوع...", isError: false });
-    
-    setTimeout(() => {
-      let volunteerId = scannedOutput.trim();
-
-      // الفلتر الذكي: لو المقروء عبارة عن رابط كامل، بنقصه عشان نطلع رقم المتطوع المكتوب في آخره بس
-      if (volunteerId.startsWith("http")) {
-        const parts = volunteerId.split("/").filter(part => part.length > 0);
-        volunteerId = parts[parts.length - 1]; // بياخذ الجزء الأخير الممثل لرقم المتطوع
-      }
-
-      // التوجيه الداخلي الموحد عبر wouter بدون ريفريش يضايق المستخدم
-      setLocation(`/profile/${volunteerId}`);
-    }, 1500);
-  };
-
-  // 2. معالجة رفع صورة البطاقة (قراءة حقيقية من الملف)
+  // معالجة قراءة وتحليل صورة البطاقة المرفوعة
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setIsProcessing(true);
-      setScanStatus({ text: "📸 جاري مسح وقراءة صورة البطاقة بالليزر...", isError: false });
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      setTimeout(async () => {
-        try {
-          const html5QrCode = new Html5Qrcode("file-scan-buffer");
-          const decodedText = await html5QrCode.scanFile(file, true);
-          triggerSuccessEffect(decodedText);
-        } catch (err) {
-          setIsProcessing(false);
-          setScanStatus({ 
-            text: "❌ تعذر العثور على رمز QR واضح في الصورة. تأكد من وضوح الإضاءة أو جرب البحث اليدوي.", 
-            isError: true 
-          });
-        }
-      }, 1500);
+    const imageUrl = URL.createObjectURL(file);
+    setImagePreview(imageUrl);
+    setIsScanning(true);
+    setErrorMessage(null);
+
+    try {
+      const html5QrCode = new Html5Qrcode("file-scanner-buffer");
+      const result = await html5QrCode.scanFile(file, true);
+      
+      if (result) {
+        extractAndNavigate(result);
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("لم نتمكن من رصد رمز QR واضح بالبطاقة. تأكد من جودة الصورة والإضاءة.");
+      setIsScanning(false);
     }
   };
 
-  // 3. البحث اليدوي المربوط بنفس دالة النجاح والتأثيرات
+  const extractAndNavigate = (text: string) => {
+    const match = text.match(/SRCS-2026-\d+/i);
+    if (match) {
+      setLocation(`/profile/${match[0].toUpperCase()}`);
+    } else {
+      setErrorMessage("الرمز الممسوح غير مسجل في منظومة أكواد متطوعي المحلية.");
+      setIsScanning(false);
+    }
+  };
+
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (digits.length !== 4) return;
-
-    // تركيب الرقم بنفس الصيغة المتوقعة في السجلات والروابط العندك
-    const fullId = `SRCS-2026-${digits}`;
-    triggerSuccessEffect(fullId);
+    if (idInput.length === 4) {
+      setLocation(`/profile/SRCS-2026-${idInput}`);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6 antialiased font-sans" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
       
-      <style>{`
-        @keyframes laserMove {
-          0% { top: 0%; opacity: 1; }
-          50% { top: 100%; opacity: 1; }
-          100% { top: 0%; opacity: 1; }
-        }
-        .animate-laser { animation: laserMove 2s linear infinite; }
-      `}</style>
+      {/* الهيدر الحر المفتوح في الأعلى بدون قيود الصناديق */}
+      <div className="w-full max-w-sm text-center mb-8 relative z-10">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-50 text-red-600 text-3xl mb-3 shadow-sm border border-red-100">
+          ❤️
+        </div>
+        <h1 className="text-2xl font-black tracking-tight text-slate-900">بوابة التدقيق الرقمية</h1>
+        <p className="text-xs text-slate-500 mt-1 font-bold">جمعية الهلال الأحمر السوداني - جبل أولياء</p>
+      </div>
 
-      <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] bg-red-900/20 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-[-20%] right-[-20%] w-[600px] h-[600px] bg-red-900/10 rounded-full blur-[120px] pointer-events-none"></div>
-
-      <div id="file-scan-buffer" className="hidden"></div>
-
-      <div className="w-full max-w-md bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700/50 p-6 relative z-10">
+      {/* 🛠️ لوحة الخيارات الحرة المستوية عالية التباين والوضوح */}
+      <div className="w-full max-w-sm grid grid-cols-3 gap-2 bg-white p-2 rounded-2xl border border-slate-200/80 shadow-sm mb-6">
+        <button
+          onClick={() => setActiveTab("camera")}
+          className={`flex flex-col items-center justify-center gap-1 py-3 px-2 rounded-xl text-xs font-black transition-all duration-200 ${
+            activeTab === "camera"
+              ? "bg-red-600 text-white shadow-md shadow-red-600/10 scale-[1.02]"
+              : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+          }`}
+        >
+          <span className="text-base">📷</span>
+          <span>كاميرا لايف</span>
+        </button>
         
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-red-500/10 rounded-2xl border border-red-500/30 text-red-500 text-3xl mb-3 shadow-lg">
-            ❤️
-          </div>
-          <h2 className="text-xl font-black tracking-wide text-white">بوابة التدقيق الرقمية</h2>
-          <p className="text-xs text-slate-400 mt-1">جمعية الهلال الأحمر السوداني - جبل أولياء</p>
-        </div>
+        <button
+          onClick={() => setActiveTab("file")}
+          className={`flex flex-col items-center justify-center gap-1 py-3 px-2 rounded-xl text-xs font-black transition-all duration-200 ${
+            activeTab === "file"
+              ? "bg-red-600 text-white shadow-md shadow-red-600/10 scale-[1.02]"
+              : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+          }`}
+        >
+          <span className="text-base">🖼️</span>
+          <span>رفع صورة</span>
+        </button>
 
-        <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 mb-6">
-          {(["camera", "file", "manual"] as ScanMethod[]).map((m) => (
-            <button
-              key={m}
-              disabled={isProcessing}
-              onClick={() => { setMethod(m); setScanStatus(null); }}
-              className={`py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${
-                method === m
-                  ? "bg-red-600 text-white shadow-md shadow-red-600/20 scale-[1.02]"
-                  : "text-slate-400 hover:text-slate-200 disabled:opacity-50"
-              }`}
-            >
-              {m === "camera" && "📷 كاميرا لايف"}
-              {m === "file" && "🖼️ رفع صورة"}
-              {m === "manual" && "🔢 رقم القيد"}
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={() => setActiveTab("manual")}
+          className={`flex flex-col items-center justify-center gap-1 py-3 px-2 rounded-xl text-xs font-black transition-all duration-200 ${
+            activeTab === "manual"
+              ? "bg-red-600 text-white shadow-md shadow-red-600/10 scale-[1.02]"
+              : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+          }`}
+        >
+          <span className="text-base">🔢</span>
+          <span>رقم القيد</span>
+        </button>
+      </div>
 
-        <div className="min-h-[260px] flex flex-col justify-center relative bg-slate-950/40 rounded-2xl border border-slate-800 p-4 overflow-hidden">
-          
-          {isProcessing && (
-            <div className="absolute inset-0 bg-red-500/5 pointer-events-none z-30">
-              <div className="w-full h-[3px] bg-gradient-to-r from-transparent via-red-500 to-transparent absolute shadow-[0_0_12px_#ef4444] animate-laser"></div>
-            </div>
-          )}
+      {/* ساحة العمل والعرض الحرة ذات التصميم الإنسيابي الموحد */}
+      <div className="w-full max-w-sm space-y-4">
 
-          {method === "camera" && (
-            <div className="w-full h-full flex flex-col items-center justify-center">
-              <div id="camera-reader" className="w-full rounded-xl overflow-hidden text-slate-900 font-sans"></div>
-              <p className="text-[11px] text-slate-500 text-center mt-3">ضع مربع الـ QR داخل إطار الكاميرا ليتم الفحص تلقائياً</p>
-            </div>
-          )}
-
-          {method === "file" && (
-            <div 
-              onClick={() => !isProcessing && fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-700 hover:border-red-500/50 bg-slate-950/60 rounded-xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center group"
-            >
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-              <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">📥</div>
-              <p className="text-sm font-bold text-slate-300">اضغط لإرفاق صورة البطاقة</p>
-              <p className="text-xs text-slate-500 mt-1">قم برفع صورة واضحة للـ QR الموجود بالبطاقة</p>
-            </div>
-          )}
-
-          {method === "manual" && (
-            <form onSubmit={handleManualSubmit} className="space-y-4 w-full text-center p-2">
-              <div className="text-center">
-                <span className="text-xs text-slate-400 font-bold block mb-3">أدخل الأربعة أرقام الأخيرة من بطاقة المتطوع</span>
-                
-                <div className="flex items-center justify-center bg-slate-950 rounded-2xl border border-slate-700/80 p-2 max-w-[290px] mx-auto shadow-inner">
-                  <span className="text-sm font-black tracking-wider text-slate-500 px-3 select-none border-l border-slate-800">
-                    SRCS-2026-
-                  </span>
-                  <input
-                    type="text"
-                    maxLength={4}
-                    value={digits}
-                    onChange={(e) => setDigits(e.target.value.replace(/\D/g, ""))}
-                    placeholder="0000"
-                    disabled={isProcessing}
-                    className="w-20 bg-transparent text-center text-xl font-black text-red-500 placeholder:text-slate-800 focus:outline-none tracking-widest"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isProcessing || digits.length !== 4}
-                className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-600 text-white font-bold text-sm py-3 rounded-xl transition-all duration-300 shadow-lg shadow-red-900/20"
-              >
-                {isProcessing ? "جاري التدقيق البصري..." : "فحص السجل الرقمي 🔍"}
-              </button>
-            </form>
-          )}
-        </div>
-
-        {scanStatus && (
-          <div className={`mt-4 p-3 rounded-xl text-center text-xs font-bold border transition-all ${
-            scanStatus.isError
-              ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-              : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-          }`}>
-            {scanStatus.text}
+        {/* 1. مساحة عمل الكاميرا */}
+        {activeTab === "camera" && (
+          <div className="relative bg-white border border-slate-200 shadow-xl rounded-[2rem] overflow-hidden aspect-square flex flex-col items-center justify-center">
+            <div id="camera-scanner-view" className="w-full h-full object-cover"></div>
+            <div className="absolute inset-0 border-4 border-red-600/20 pointer-events-none rounded-[2rem] m-6 animate-pulse"></div>
           </div>
         )}
 
+        {/* 2. مساحة رفع الملف المعززة بالمعاينة وخيط الليزر السينمائي المباشر */}
+        {activeTab === "file" && (
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="relative bg-white border-2 border-dashed border-slate-300 hover:border-red-500 rounded-[2rem] shadow-xl overflow-hidden aspect-square flex flex-col items-center justify-center cursor-pointer group transition-all"
+          >
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+
+            {imagePreview ? (
+              <div className="w-full h-full relative p-3 bg-slate-50 flex items-center justify-center">
+                <img src={imagePreview} alt="البطاقة المرفوعة" className="w-full h-full object-contain rounded-2xl shadow-inner" />
+                
+                {/* 💥 تأثير خط الليزر الأحمر المنطلق انسيابياً مباشرة فوق صورة البطاقة الحقيقية */}
+                {isScanning && (
+                  <div className="absolute left-0 right-0 h-[3px] bg-red-600 shadow-[0_0_15px_#dc2626] animate-[laser_2.5s_ease-in-out_infinite]"></div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center p-8 space-y-3">
+                <div className="w-16 h-16 bg-red-50 text-red-600 text-3xl rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                  📥
+                </div>
+                <p className="text-sm font-black text-slate-800">اضغط لإدراج صورة البطاقة</p>
+                <p className="text-xs text-slate-400 max-w-[220px] mx-auto leading-relaxed font-medium">سيقوم النظام بمسح وقراءة رمز الـ QR تلقائياً من الصورة المرفقة</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 3. مساحة الإدخال اليدوي الموحدة الخط والوزن بنسبة 100% لراحة العين */}
+        {activeTab === "manual" && (
+          <form onSubmit={handleManualSubmit} className="bg-white border border-slate-200 shadow-xl rounded-[2rem] p-6 space-y-5">
+            <p className="text-center text-xs text-slate-500 font-bold">أدخل الأرقام الأربعة الأخيرة المدرجة في بطاقة المتطوع</p>
+            
+            {/* 🛠️ إدخال موحد المقاس والخط الهندسي المتزن كلياً */}
+            <div className="flex items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 font-mono text-xl tracking-wider text-center focus-within:border-red-500 focus-within:bg-white transition-all shadow-inner">
+              <span className="text-slate-400 select-none font-black text-xl">SRCS-2026-</span>
+              <input
+                type="text"
+                maxLength={4}
+                placeholder="0000"
+                value={idInput}
+                onChange={(e) => setIdInput(e.target.value.replace(/\D/g, ""))}
+                className="bg-transparent text-slate-800 font-black w-16 focus:outline-none placeholder-slate-300 text-xl caret-red-600 mr-1 text-right"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={idInput.length !== 4}
+              className="w-full py-3.5 px-4 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-black rounded-xl text-sm transition-all shadow-lg shadow-red-600/10"
+            >
+              🔍 فحص السجل الميداني
+            </button>
+          </form>
+        )}
+
+        {/* التنبيهات ورسائل الخطأ بتصميم ناعم ومطابق للهوية الرسمية */}
+        {errorMessage && (
+          <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-xs text-red-600 text-center font-black leading-relaxed shadow-sm">
+            ⚠️ {errorMessage}
+          </div>
+        )}
+
+        {/* مؤشر المعالجة تحت اللوحة الحرة */}
+        {isScanning && activeTab === "file" && (
+          <p className="text-center text-xs text-emerald-600 font-bold animate-pulse">
+            ⚙️ جاري مسح وقراءة بيانات البطاقة بالليزر الرقمي...
+          </p>
+        )}
       </div>
+
+      {/* تذييل أمني يعزز الطابع الرسمي للمنظومة */}
+      <div className="text-center mt-12 opacity-60">
+        <p className="text-[10px] text-slate-400 leading-relaxed font-bold">
+          جمعية الهلال الأحمر السوداني - فرع ولاية الخرطوم <br/>
+          نافذة التحقق الفوري الميدانية الموحدة 2026
+        </p>
+      </div>
+
+      {/* بافر داخلي مخفي لمعالجة ملفات الـ QR برمجياً */}
+      <div id="file-scanner-buffer" className="hidden"></div>
+
+      {/* كود حقن حركة الليزر الانسيابية لضمان الأداء الفخم على الهواتف */}
+      <style>{`
+        @keyframes laser {
+          0% { top: 5%; opacity: 0.4; }
+          50% { top: 92%; opacity: 1; }
+          100% { top: 5%; opacity: 0.4; }
+        }
+      `}</style>
     </div>
   );
 }
