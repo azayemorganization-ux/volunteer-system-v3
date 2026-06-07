@@ -672,6 +672,9 @@ export default function Home() {
               <FormField control={form.control} name="isTotTrainer" render={({ field }) => (
                 <FormItem className="space-y-4">
                   <FormLabel className="text-xs font-bold text-slate-700">هل أنت مدرب إسعافات أولية معتمد بالجمعية؟ <span className="text-[#C1272D]">*</span></FormLabel>
+                  <p className="text-[11px] font-semibold text-amber-600 block -mt-2 mb-1">
+  ⚠️ تنبيه: المقصود هنا أنك (مُحاضِر/مُعلِّم) تملك شهادة TOT، وليس حضورك للدورة كدارس.
+</p>
                   <FormControl>
                     <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col sm:flex-row gap-4 sm:gap-8 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
                       <div className="flex items-center gap-2.5 cursor-pointer">
