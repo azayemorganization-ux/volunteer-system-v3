@@ -47,7 +47,7 @@ export default function AdvancedScannerPage() {
       }
     } catch (err) {
       console.error(err);
-      // 🛠️ 1. تأخير مصطنع ثانيتين في حالة الفشل عشان الليزر يظهر للمستخدم
+      // تأخير مصطنع ثانيتين في حالة الفشل ليظهر الفحص بالليزر للمستخدم أولاً
       setTimeout(() => {
         setErrorMessage("يبدو أن جودة الصورة غير واضحة لذلك لم نتمكن من قراءة رمز الـ QR.. الرجاء رفع صورة واضحة وبجودة ممتازة.");
         setIsScanning(false);
@@ -85,8 +85,9 @@ export default function AdvancedScannerPage() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 antialiased" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
         <div className="text-center space-y-6 select-none animate-[fadeIn_0.5s_ease-out]">
           
+          {/* 🛠️ تعديل: تغيير الأيقونة من قلب إلى درع حماية وأمان رقمي موثوق */}
           <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto shadow-xl border border-red-50 animate-[pulse_1.8s_infinite]">
-            <span className="text-5xl">❤️</span>
+            <span className="text-5xl">🛡️</span>
           </div>
           
           <div className="space-y-2">
@@ -115,18 +116,18 @@ export default function AdvancedScannerPage() {
   }
 
   // ========================================================
-  // 📱 2. واجهة صفحة الفحص المفتوحة (بعد التعديلات الشاملة)
+  // 📱 2. واجهة صفحة الفحص المفتوحة (النسخة النهائية المستقرة)
   // ========================================================
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col items-center justify-center p-6 animate-[fadeIn_0.4s_ease-out] antialiased font-sans" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
       
-      {/* هيدر الصفحة المحدث بحسب طلبك وبدون رموز عشوائية */}
+      {/* هيدر الصفحة الموحد */}
       <div className="w-full max-w-sm text-center mb-8 relative z-10">
         <h1 className="text-2xl font-black tracking-tight text-slate-900">افحص بطاقتك الرقمية وبياناتك</h1>
         <p className="text-xs text-slate-500 mt-1.5 font-bold">نافذة التحقق الميداني الفوري الموحدة</p>
       </div>
 
-      {/* لوحة خيارات حرة عائمة */}
+      {/* لوحة خيارات التبديل العائمة */}
       <div className="w-full max-w-sm grid grid-cols-2 gap-3 bg-white p-2 rounded-2xl border border-slate-200/80 shadow-sm mb-6">
         <button
           onClick={() => setActiveTab("file")}
@@ -151,15 +152,15 @@ export default function AdvancedScannerPage() {
         </button>
       </div>
 
-      {/* ساحة العمل والعرض الحرة المفتوحة كلياً */}
+      {/* ساحة العمل الرئيسية */}
       <div className="w-full max-w-sm space-y-4">
 
-        {/* 🛠️ لوحة ارفاق صورة البطاقة على شكل كارد مع زرار صريح وتنبيه ناعم */}
+        {/* لوحة رفع صورة البطاقة */}
         {activeTab === "file" && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div 
               onClick={() => fileInputRef.current?.click()}
-              className="relative bg-white border border-slate-200 shadow-xl rounded-[2rem] overflow-hidden aspect-square flex flex-col items-center justify-center cursor-pointer group transition-all"
+              className="relative bg-white border border-slate-200 shadow-xl rounded-[2rem] overflow-hidden aspect-square flex flex-col items-center justify-center cursor-pointer group transition-all hover:border-slate-300"
             >
               <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
 
@@ -173,11 +174,9 @@ export default function AdvancedScannerPage() {
                   )}
                 </div>
               ) : (
-                // واجهة الكارد المفتوح الحر مع زر الإدخال الصريح المكتوب
                 <div className="text-center p-8 space-y-4">
                   <p className="text-base font-black text-slate-800">ارفع صورة البطاقة المراد فحصها</p>
                   
-                  {/* 🛠️ الزرار الصريح الواضح لمنع الضغط بالصدفة */}
                   <button type="button" className="inline-flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-md transition-all group-hover:scale-105">
                     اضغط هنا لاختيار البطاقة من المعرض
                   </button>
@@ -185,21 +184,23 @@ export default function AdvancedScannerPage() {
               )}
             </div>
 
-            {/* 🛠️ تنبيه جودة الصورة المسبق باللغة السهلة المفهومة */}
+            {/* 🛠️ تعديل: تصميم لوحة تنبيه جودة الصورة المسبق لتكون بارزة، واضحة وممتازة بصرياً للـ UX */}
             {!imagePreview && (
-              <p className="text-[11px] text-slate-400 text-center font-semibold px-4 leading-relaxed">
-                تنبيه: إذا كانت الصورة غير واضحة وجودتها ضعيفة، فلن يتمكن النظام من قراءة رمز الـ QR، لذلك يرجى التأكد من جودة الصورة قبل رفعها.
-              </p>
+              <div className="bg-amber-50/80 border border-amber-200/70 rounded-2xl p-4 text-[11px] text-amber-900 font-bold px-4 leading-relaxed flex items-start gap-2.5 shadow-sm">
+                <span className="text-sm leading-none mt-0.5">💡</span>
+                <p>
+                  <span className="text-amber-700 font-black">ملاحظة هامة للمتطوع:</span> إذا كانت صورة البطاقة غير واضحة أو ذات جودة ضعيفة، فلن يتمكن النظام من قراءة رمز الـ QR تلقائياً. يرجى التأكد دائماً من رفع صورة ممتازة وواضحة المعالم.
+                </p>
+              </div>
             )}
           </div>
         )}
 
-        {/* 🛠️ خانة الإدخال اليدوي الموحدة والمضبوطة الاتجاه بالملي (SRCS باليسار والأرقام تتبعها لليمين) */}
+        {/* خانة الإدخال اليدوي المظبوطة بالكامل */}
         {activeTab === "manual" && (
           <form onSubmit={handleManualSubmit} className="bg-white border border-slate-200 shadow-xl rounded-[2rem] p-6 space-y-5">
             <p className="text-center text-xs text-slate-500 font-bold">أدخل رقم المتطوع لفحصه في السجل الميداني</p>
             
-            {/* 🛠️ قلب الاتجاه ليكون LTR صريح لتظهر الخانات باليمين في آخر السطر تماماً */}
             <div className="flex flex-row items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 font-mono text-xl tracking-wider text-center focus-within:border-red-500 focus-within:bg-white transition-all shadow-inner" dir="ltr">
               <span className="text-slate-400 select-none font-black text-xl">SRCS-2026-</span>
               <input
@@ -222,10 +223,23 @@ export default function AdvancedScannerPage() {
           </form>
         )}
 
-        {/* رسائل التنبيه والخطأ بالصياغة اللغوية السهلة المفهومة التي طلبتها */}
+        {/* 🛠️ تعديل: رسائل الخطأ وعرض زرار "إعادة التجربة الفوري والمحترف" عند فشل القراءة */}
         {errorMessage && (
-          <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-xs text-red-600 text-center font-black leading-relaxed shadow-sm">
-            ⚠️ {errorMessage}
+          <div className="space-y-2.5 animate-[fadeIn_0.3s_ease-out]">
+            <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-xs text-red-600 text-center font-black leading-relaxed shadow-sm">
+              ⚠️ {errorMessage}
+            </div>
+            
+            {/* يظهر هذا الزرار التفاعلي فقط في حالة التبويب الرقمي وعند انتهاء عملية الفحص بالخطأ */}
+            {activeTab === "file" && !isScanning && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-2"
+              >
+                🔄 اضغط هنا لتجربة بطاقة أخرى أو إعادة المحاولة
+              </button>
+            )}
           </div>
         )}
 
