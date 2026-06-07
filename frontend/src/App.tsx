@@ -9,10 +9,11 @@ import AdminLogin from "./pages/admin-login";
 import AdminDashboard from "./pages/admin-dashboard";
 import StatusCheck from "./pages/status";
 import ProfilePage from "./pages/profile"; 
+import AdvancedScannerPage from "./pages/verify"; // 👈 [إضافة 1] استدعاء صفحة الفحص الجديدة بأمان
 
 const queryClient = new QueryClient();
 
-// 🛑 1. مكون شاشة الصيانة الشيك اللي هتظهر للمتطوعين
+// 🛑 1. مكون شاشة الصيانة الشيك اللي هتظهر للمتطوعين (لم يتم تعديلها)
 function MaintenancePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', direction: 'rtl', fontFamily: 'sans-serif', padding: '20px', textAlign: 'center', backgroundColor: '#f9fafb' }}>
@@ -35,6 +36,9 @@ function Router() {
       {/* المسار الذكي لبيانات المتطوع (الخاص بالـ QR Code) */}
       <Route path="/profile/:id" component={ProfilePage} />
 
+      {/* 👈 [إضافة 2] مسار بوابة التدقيق السريع عبر الكاميرا والملفات */}
+      <Route path="/verify" component={AdvancedScannerPage} />
+
       <Route path="/admin" component={AdminLogin} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
 
@@ -44,7 +48,7 @@ function Router() {
 }
 
 function App() {
-  // 🔓 2. تم إيقاف قفل الصيانة وفتح النظام للجميع بنجاح
+  // 🔓 2. تم إيقاف قفل الصيانة وفتح النظام للجميع بنجاح (متروك كما هو تماماً)
   const IS_MAINTENANCE = false; // 👈 رجعناها false عشان الموقع يفتح للمتطوعين طبيعي
   const SECRET_KEY = "jabal";    // 🤫 البصمة السرية بتاعتك
 
