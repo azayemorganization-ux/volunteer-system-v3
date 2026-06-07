@@ -148,7 +148,7 @@ export default function AdvancedScannerPage() {
               : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
           }`}
         >
-          رقم القيد
+          رقم المتطوع
         </button>
       </div>
 
