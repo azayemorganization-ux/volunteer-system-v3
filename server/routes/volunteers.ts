@@ -38,11 +38,31 @@ function getAdminUnitCondition(req: any) {
   return eq(volunteersTable.id, -1); // احتياطاً لو ما عنده وحدات مسموحة ما يشوف شيء
 }
 
-// --- 2. توليد معرف المتطوع الاحترافي التلقائي ---
-function generateVolunteerId() {
+// --- 2. توليد معرف المتطوع الاحترافي التلقائي الفريد وغير المكرر (تعديل ذكي لحل الدبلجة) ---
+async function generateUniqueVolunteerId() {
   const year = new Date().getFullYear(); // 2026
-  const rand = Math.floor(Math.random() * 9000) + 1000;
-  return `SRCS-${year}-${rand}`;
+  let isDuplicate = true;
+  let finalId = "";
+
+  // الدوامة دي حتفضل تلف لحد ما تلقى رقم ما مسجل قبل كدا في جدول المتطوعين
+  while (isDuplicate) {
+    const rand = Math.floor(Math.random() * 9000) + 1000; // يحافظ على الـ 4 أرقام (1000 - 9999)
+    finalId = `SRCS-${year}-${rand}`;
+
+    // فحص مباشر في الداتا بيز للتأكد من خلوه من التكرار
+    const existing = await db
+      .select()
+      .from(volunteersTable)
+      .where(eq(volunteersTable.volunteerId, finalId))
+      .limit(1);
+
+    // لو مصفوفة السجلات فاضية، معناها الرقم نظيف وجديد تماماً ونقدر نعتمدو ونكسر الدوامة
+    if (existing.length === 0) {
+      isDuplicate = false;
+    }
+  }
+
+  return finalId;
 }
 
 // --- 3. دوال الحماية والتحقق من الصلاحيات ---
@@ -267,8 +287,9 @@ router.post("/", async (req: any, res: any) => {
     let finalTotCertUrl = d.totCertificateUrl || null;
     let finalOtherCertUrl = d.otherCertificateUrl || null;
 
+    // تم تغيير توليد الرقم هنا ليعمل بـ await مع الدالة الذكية المحدثة لمنع التكرار نهائياً
     const [newVolunteer] = await db.insert(volunteersTable).values({
-      volunteerId: generateVolunteerId(),
+      volunteerId: await generateUniqueVolunteerId(),
       fullName: d.fullName.trim(),
       nationalId: d.nationalId.trim(),
       phone: d.phone.trim(),
