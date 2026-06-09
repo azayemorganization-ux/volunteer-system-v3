@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRoute } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { fetchPublicVolunteer } from "@/lib/api";
 
 // تعريف دقيق للبيانات القادمة من التحقق العام
@@ -62,8 +62,9 @@ export default function ProfilePage() {
     );
   }
 
-  // 4. واجهة الخطأ: السجل غير نشط أو تم تزويره
-  if (error || !volunteer) {
+  // 4. واجهة الخطأ: السجل غير نشط أو تم تزويره أو مرفوض تماماً
+  // تم ربطها أيضاً بحالة الرفض التام لحماية أمن النظام
+  if (error || !volunteer || volunteer.status === "rejected") {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50" dir="rtl">
         <Card className="p-8 text-center border-t-8 border-red-600 shadow-2xl max-w-sm w-full rounded-[2rem]">
@@ -82,7 +83,7 @@ export default function ProfilePage() {
     );
   }
 
-  // 5. واجهة الاعتماد الرسمية والناجحة عند فحص الـ QR Code
+  // 5. واجهة فحص الـ QR Code الناجحة (تفرّق الآن بذكاء بين المعتمد وقيد الانتظار)
   return (
     <div className="min-h-screen bg-slate-100 p-4 flex flex-col items-center justify-center font-sans" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
       
@@ -133,11 +134,18 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* شارة التوثيق والختم الأخضر اللامع */}
-          <div className="flex items-center justify-center gap-2.5 bg-emerald-50 text-emerald-800 py-4 rounded-[1.5rem] font-black border border-emerald-200 shadow-sm transition-transform hover:scale-[1.02]">
-            <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0" />
-            <span className="text-lg tracking-tight">قيد المتطوع نشط ومعتمد</span>
-          </div>
+          {/* 🔄 الختم الأمني الذكي: يتغير لونه ونصّه تلقائياً حسب حالة المتطوع */}
+          {volunteer.status === "approved" ? (
+            <div className="flex items-center justify-center gap-2.5 bg-emerald-50 text-emerald-800 py-4 rounded-[1.5rem] font-black border border-emerald-200 shadow-sm transition-transform hover:scale-[1.02]">
+              <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0" />
+              <span className="text-lg tracking-tight">قيد المتطوع نشط ومعتمد</span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2.5 bg-amber-50 text-amber-800 py-4 rounded-[1.5rem] font-black border border-amber-200 shadow-sm transition-transform hover:scale-[1.02]">
+              <Clock className="h-6 w-6 text-amber-600 shrink-0 animate-[spin_4s_infinite_linear]" />
+              <span className="text-lg tracking-tight">الطلب قيد المراجعة الإدارية</span>
+            </div>
+          )}
 
           {/* التذييل الأمني */}
           <div className="text-center pt-4 border-t border-slate-100 opacity-70">
