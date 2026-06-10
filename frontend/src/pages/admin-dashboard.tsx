@@ -295,7 +295,7 @@ function StatsTab() {
             <div className="space-y-1">
               <h4 className="font-bold text-amber-950 text-sm md:text-base">
                 {isGlobalAdmin ? (
-                  `تنبيه الإدارة العامة: يوجد حالياً (${rejectedCount}) طلبات مرفوضة معلقة في النظام.`
+                  `تنبيه للسادة المشرفين : يوجد حالياً (${rejectedCount}) طلبات مرفوضة معلقة في النظام.`
                 ) : (
                   `تنبيه لوحدتك: توجد حالياً (${rejectedCount}) طلبات مرفوضة معلقة تحتاج متابعة وإصلاح.`
                 )}
@@ -303,7 +303,7 @@ function StatsTab() {
               <p className="text-xs text-amber-800 leading-relaxed font-semibold">
                 📌 <span className="font-bold text-amber-950">أين تجد هذه الطلبات؟</span> اضغط في الأعلى على تبويب <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"دليل المتطوعين"</span> ثم من خانة (تصفية بالحالة) اختر <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"مرفوض"</span> للوصول لقائمتهم وهواتفهم.
                 <br />
-                📞 <span className="font-bold text-amber-950">طريقة توجيه المتطوع هاتفياً:</span> اتصل بالمتطوع المرفوض واطلب منه الدخول للموقع واختيار زر <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"معرفة حالة الطلب"</span>، ثم كتابة <span className="font-black text-amber-950">رقم المتطوع / الرقم الوطني</span>، ليقوم بتعديل بياناته المعيوبة وإعادة إرسال الطلب فوراً.
+                📞 <span className="font-bold text-amber-950">طريقة توجيه المتطوع هاتفياً:</span> اتصل بالمتطوع المرفوض او ارسل له في الواتساب واطلب منه الدخول للموقع واختيار زر <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"معرفة حالة الطلب"</span>، ثم كتابة <span className="font-black text-amber-950">الرقم الوطني</span>، ليقوم بتعديل بياناته المعيوبة وإعادة إرسال الطلب فوراً.
               </p>
             </div>
           </div>
