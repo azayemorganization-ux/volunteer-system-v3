@@ -224,13 +224,13 @@ export default function AdminDashboard() {
   );
 }
 
-// ─── Stats Tab (نسخة مطورة ومأمنة بالكامل بدون تعديل باقي الملف) ───────────────────
+// ─── Stats Tab (نسخة مطورة ومأمنة بالكامل بدون تعديل باقي الملف) ──────────────────
 
 function StatsTab() {
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 🔒 قراءة أمان: السيستم بيعرف نوع المشرف تلقائياً من الذاكرة بدون تعديل أي سطر برا الدالة دي
+  // 🔒 قراءة أمان: معرفة نوع المشرف تلقائياً
   const localAdmin = localStorage.getItem("admin_user");
   let isGlobalAdmin = false;
   if (localAdmin) {
@@ -283,8 +283,8 @@ function StatsTab() {
         </div>
       )}
 
-      {/* 2. بنير توجيه المشرفين للطلبات المرفوضة (الجديد الإرشادي) */}
-      {rejectedCount > 0 && (
+      {/* 2. بنير توجيه المشرفين للطلبات المرفوضة (تم تعديل الشرط ليظهر فقط لمشرفي القطاعات ويختفي منك ومن الـ subadmin) */}
+      {rejectedCount > 0 && !isGlobalAdmin && (
         <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl mb-4 flex items-center justify-between shadow-sm" dir="rtl">
           <div className="flex items-center gap-3.5">
             <div className="bg-amber-100 p-2.5 rounded-xl text-amber-700 shrink-0">
@@ -294,16 +294,12 @@ function StatsTab() {
             </div>
             <div className="space-y-1">
               <h4 className="font-bold text-amber-950 text-sm md:text-base">
-                {isGlobalAdmin ? (
-                  `تنبيه للسادة المشرفين : يوجد حالياً (${rejectedCount}) طلبات مرفوضة معلقة في النظام.`
-                ) : (
-                  `تنبيه لوحدتك: توجد حالياً (${rejectedCount}) طلبات مرفوضة معلقة تحتاج متابعة وإصلاح.`
-                )}
+                تنبيه لوحدتك: توجد حالياً ({rejectedCount}) طلبات مرفوضة معلقة تحتاج متابعة وإصلاح.
               </h4>
               <p className="text-xs text-amber-800 leading-relaxed font-semibold">
-                📌 <span className="font-bold text-amber-950">أين تجد هذه الطلبات؟</span> اضغط في الأعلى على تبويب <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"دليل المتطوعين"</span> ثم من خانة (تصفية بالحالة) اختر <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"مرفوض"</span> للوصول لقائمتهم وهواتفهم.
+                📌 <span className="font-bold text-amber-950">أين تجد هذه الطلبات؟</span> اضغط في الأعلى على تبويب <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"دليل المتطوعين"</span> ثم من الخانة المكتوب عليها (الكل) اضغط عليها واختر <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"مرفوض"</span> للوصول لقائمتهم وهواتفهم.
                 <br />
-                📞 <span className="font-bold text-amber-950">طريقة توجيه المتطوع هاتفياً:</span> اتصل بالمتطوع المرفوض او ارسل له في الواتساب واطلب منه الدخول للموقع واختيار زر <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"معرفة حالة الطلب"</span>، ثم كتابة <span className="font-black text-amber-950">الرقم الوطني</span>، ليقوم بتعديل بياناته المعيوبة وإعادة إرسال الطلب فوراً.
+                📞 <span className="font-bold text-amber-950">طريقة توجيه المتطوع هاتفياً:</span> اتصل بالمتطوع المرفوض او ارسل له في الواتساب واطلب منه الدخول للموقع واختيار زر <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"معرفة حالة طلبك السابق"</span>، ثم كتابة <span className="font-black text-amber-950">الرقم الوطني</span>، ليقوم بتعديل بياناته المعيوبة وإعادة إرسال الطلب فوراً. سيختفي هذا التنبيه بمجرد اعتماد الطلبات المرفوضة. 
               </p>
             </div>
           </div>
