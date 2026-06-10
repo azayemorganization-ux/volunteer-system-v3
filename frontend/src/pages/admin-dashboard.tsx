@@ -224,11 +224,23 @@ export default function AdminDashboard() {
   );
 }
 
-// ─── Stats Tab ───────────────────────────────────────────────────────────────
+// ─── Stats Tab (نسخة مطورة ومأمنة بالكامل بدون تعديل باقي الملف) ───────────────────
 
 function StatsTab() {
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 🔒 قراءة أمان: السيستم بيعرف نوع المشرف تلقائياً من الذاكرة بدون تعديل أي سطر برا الدالة دي
+  const localAdmin = localStorage.getItem("admin_user");
+  let isGlobalAdmin = false;
+  if (localAdmin) {
+    try {
+      const parsed = JSON.parse(localAdmin);
+      isGlobalAdmin = parsed.role === "superadmin" || parsed.role === "subadmin";
+    } catch (e) {
+      console.error("خطأ قراءة محلي", e);
+    }
+  }
 
   const loadStats = () => {
     setIsLoading(true);
@@ -246,8 +258,11 @@ function StatsTab() {
     return <div className="py-12 text-center">جاري تحميل الإحصائيات...</div>;
   }
 
+  const rejectedCount = stats.rejected ?? 0;
+
   return (
     <div className="space-y-6">
+      {/* 1. بنير الطلبات المعلقة (حقك القديم زي ما هو بدون تعديل) */}
       {stats.pending > 0 && (
         <div className="flex items-center gap-4 bg-amber-50 border border-amber-300 rounded-xl px-5 py-4 shadow-sm">
           <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shrink-0">
@@ -268,6 +283,37 @@ function StatsTab() {
         </div>
       )}
 
+      {/* 2. بنير توجيه المشرفين للطلبات المرفوضة (الجديد الإرشادي) */}
+      {rejectedCount > 0 && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl mb-4 flex items-center justify-between shadow-sm" dir="rtl">
+          <div className="flex items-center gap-3.5">
+            <div className="bg-amber-100 p-2.5 rounded-xl text-amber-700 shrink-0">
+              <svg xmlns="http://www.w3.org/2000/xl" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+              </svg>
+            </div>
+            <div className="space-y-1">
+              <h4 className="font-bold text-amber-950 text-sm md:text-base">
+                {isGlobalAdmin ? (
+                  `تنبيه الإدارة العامة: يوجد حالياً (${rejectedCount}) طلبات مرفوضة معلقة في النظام.`
+                ) : (
+                  `تنبيه لوحدتك: توجد حالياً (${rejectedCount}) طلبات مرفوضة معلقة تحتاج متابعة وإصلاح.`
+                )}
+              </h4>
+              <p className="text-xs text-amber-800 leading-relaxed font-semibold">
+                📌 <span className="font-bold text-amber-950">أين تجد هذه الطلبات؟</span> اضغط في الأعلى على تبويب <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"دليل المتطوعين"</span> ثم من خانة (تصفية بالحالة) اختر <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"مرفوض"</span> للوصول لقائمتهم وهواتفهم.
+                <br />
+                📞 <span className="font-bold text-amber-950">طريقة توجيه المتطوع هاتفياً:</span> اتصل بالمتطوع المرفوض واطلب منه الدخول للموقع واختيار زر <span className="bg-amber-100 px-1.5 py-0.5 rounded font-black text-amber-950">"معرفة حالة الطلب"</span>، ثم كتابة <span className="font-black text-amber-950">رقم المتطوع / الرقم الوطني</span>، ليقوم بتعديل بياناته المعيوبة وإعادة إرسال الطلب فوراً.
+              </p>
+            </div>
+          </div>
+          <span className="bg-amber-600 text-white font-black text-xs min-w-[24px] h-6 flex items-center justify-center rounded-full px-1.5 shrink-0 shadow-sm">
+            {rejectedCount}
+          </span>
+        </div>
+      )}
+
+      {/* 3. كروت الإحصائيات الأربعة حقتك القديمة زي ما هي بالظبط */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -297,6 +343,7 @@ function StatsTab() {
     </div>
   );
 }
+
 
 // ─── Shared Profile Dialog ────────────────────────────────────────────────────
 
