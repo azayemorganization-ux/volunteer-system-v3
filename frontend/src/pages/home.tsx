@@ -150,9 +150,9 @@ export default function Home() {
     fetchLiveUnits();
   }, []);
 
-  // ضبط العداد لينتهي رسمياً في 30 يونيو 2026
+  // ⏱️ تعديل هندسي: ضبط العداد لينتهي رسمياً الليلة الساعة 11:59 مساءً بحسب قرار الإغلاق
   useEffect(() => {
-    const targetDate = new Date("2026-06-30T23:59:59").getTime();
+    const targetDate = new Date("2026-06-11T23:59:59").getTime();
     const tick = () => {
       const now = Date.now();
       const distance = targetDate - now;
@@ -342,6 +342,29 @@ export default function Home() {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 1970 + 1 }, (_, i) => currentYear - i);
 
+  // 🛑 إضافة هندسية: حجب الاستمارة بالكامل وعرض لوحة إغلاق رسمية ومحترمة عند انتهاء الوقت لحماية السجل
+  if (timeLeft.ended) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 text-center antialiased" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
+        <div className="bg-white p-8 rounded-[2rem] max-w-md w-full shadow-xl border border-slate-200 border-t-[6px] border-t-[#C1272D]">
+          <div className="w-16 h-16 bg-red-50 text-[#C1272D] rounded-full mx-auto mb-4 flex items-center justify-center text-3xl shadow-sm border border-red-100 animate-pulse">
+            🔒
+          </div>
+          <h2 className="text-xl font-black text-slate-900 mb-2">عذراً، تم إغلاق باب التسجيل مؤقتاً</h2>
+          <p className="text-sm text-slate-600 leading-relaxed font-medium">
+            نحيطكم علماً بأن الفترة الزمنية المخصصة لحصر وتوثيق متطوعي الهلال الأحمر السوداني بمحلية جبل أولياء قد انتهت رسمياً لهذا اليوم.
+          </p>
+          <p className="text-xs text-slate-500 mt-4 leading-relaxed">
+            نشكر لكم ثقتكم وحرصكم العالي على العطاء، ويجري حالياً تدقيق ومراجعة البيانات المرفوعة من قبل غرفة العمليات ومكتب التحول الرقمي.
+          </p>
+          <div className="mt-8 pt-4 border-t border-slate-100 text-[10px] text-slate-400 font-bold tracking-wide">
+            جمعية الهلال الأحمر السوداني — فرع ولاية الخرطوم — مكتب طوارئ جبل أولياء
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 pb-16 antialiased" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
       
@@ -411,7 +434,7 @@ export default function Home() {
             <div className="flex items-center justify-between mb-3 px-1">
               <span className="text-[10px] font-bold text-amber-400 flex items-center gap-1.5">
                 <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
-                ينتهي الحصر: 30 يونيو 2026
+                ينتهي الحصر: الليلة 11:59 م
               </span>
               <span className="text-[8px] opacity-40 font-mono tracking-wider uppercase">Timer</span>
             </div>
@@ -540,7 +563,7 @@ export default function Home() {
               </div>
             </section>
 
-            {/* 2. كارت الصورة الشخصية (موزع ومنسق لحفظ المساحة والمرونة للمنتقبات) */}
+            {/* 2. كارت الصورة الشخصية */}
             <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 border-r-[5px] border-r-amber-500 transition-all hover:shadow-md duration-300">
               <div className="flex items-center gap-2 pb-4 mb-4 border-b border-slate-100">
                 <span className="text-xl">📸</span>
@@ -662,7 +685,7 @@ export default function Home() {
               )} />
             </section>
 
-            {/* 4. كارت السجل التدريبي المعني بالصياغة الجديدة */}
+            {/* 4. كارت السجل التدريبي */}
             <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 border-r-[5px] border-r-indigo-600 transition-all hover:shadow-md duration-300">
               <div className="flex items-center gap-2 pb-4 mb-6 border-b border-slate-100">
                 <span className="text-xl">🎓</span>
@@ -672,9 +695,9 @@ export default function Home() {
               <FormField control={form.control} name="isTotTrainer" render={({ field }) => (
                 <FormItem className="space-y-4">
                   <FormLabel className="text-xs font-bold text-slate-700">هل أنت مدرب إسعافات أولية معتمد بالجمعية؟ <span className="text-[#C1272D]">*</span></FormLabel>
-                <p className="text-[11px] font-semibold text-amber-600 block mt-1 mb-2">
-  ⚠️ تنبيه: المقصود هنا أنك (مُحاضِر/مُعلِّم) تملك شهادة TOT، وليس حضورك للدورة كمتدرب.
-</p>
+                  <p className="text-[11px] font-semibold text-amber-600 block mt-1 mb-2">
+                    ⚠️ تنبيه: المقصود هنا أنك (مُحاضِر/مُعلِّم) تملك شهادة TOT، وليس حضورك للدورة كمتدرب.
+                  </p>
 
                   <FormControl>
                     <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col sm:flex-row gap-4 sm:gap-8 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
@@ -728,7 +751,7 @@ export default function Home() {
                   
                   <FormField control={form.control} name="otherPrograms" render={({ field }) => (
                     <FormItem className="col-span-1 md:col-span-2 pt-3 border-t border-indigo-100/60 mt-2">
-                      <FormLabel className="text-xs font-bold text-slate-800">هل انت مدرب في برامج اخرى من برامج الجمعية؟</FormLabel>
+                      <FormLabel className="text-xs font-bold text-slate-800">هل انت مدرب في برامج اخرى من برامج الجمعية?</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="rounded-xl border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-600 h-11 text-sm font-medium">
@@ -835,7 +858,6 @@ export default function Home() {
               </div>
 
               <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4 shadow-inner-sm">
-                {/* تم تعديل الرابط هنا ليوجه للملف الجديد مباشرة */}
                 <a href="/guide.pdf" target="_blank" rel="noopener noreferrer" className="text-[#C1272D] hover:text-[#8B1519] hover:underline font-bold flex items-center gap-2 text-sm transition-colors">
                   📖 اضغط هنا لقراءة دليل تنمية المتطوعين المعتمد بجمعية الهلال الأحمر السوداني (ملف PDF رسمي)
                 </a>
@@ -878,7 +900,7 @@ export default function Home() {
         </Form>
       </div>
 
-      {/* الفوتر الاحترافي المنقّح والمعدّل بالكامل */}
+      {/* الفوتر الاحترافي المنقّح */}
       <footer className="mt-16 pb-12 text-center border-t border-slate-200 pt-8 bg-slate-50/50">
         <div className="container mx-auto px-4 flex flex-col items-center gap-3">
           <div>
