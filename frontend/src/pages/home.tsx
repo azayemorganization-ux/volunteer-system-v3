@@ -247,7 +247,7 @@ export default function Home() {
       } catch (error) {
         toast({ variant: "destructive", title: "خطأ في النظام", description: "فشل حفظ الصورة المعدلة، يرجى المحاولة مجدداً." });
         setPhotoPreview(null);
-      } finaly { setIsUploadingPhoto(false); }
+      } finally { setIsUploadingPhoto(false); }
     }
   };
 
