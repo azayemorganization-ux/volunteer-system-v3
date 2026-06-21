@@ -151,7 +151,7 @@ export default function Home() {
 
   // ضبط التايمر الديناميكي
   useEffect(() => {
-    const targetDate = new Date("2026-06-11T23:59:59").getTime();
+    const targetDate = new Date("2026-07-02T23:59:59").getTime();
     const tick = () => {
       const now = Date.now();
       const distance = targetDate - now;
