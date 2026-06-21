@@ -334,10 +334,10 @@ export default function Home() {
           {/* كرت العداد الزجاجي (يظل ظاهراً دائماً) */}
           <div className="bg-white/10 backdrop-blur-md p-5 rounded-[2rem] border border-white/15 shadow-2xl min-w-[290px]">
             <div className="flex items-center justify-between mb-3 px-1">
-              <span className="text-[10px] font-bold text-amber-400 flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
-                حالة الإغلاق: الليلة 11:59 م
-              </span>
+<span className="text-[10px] font-bold text-amber-400 flex items-center gap-1.5">
+  <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
+  حالة الإغلاق: {timeLeft.days > 0 ? `بعد ${timeLeft.days} يوم` : "اليوم آخر موعد"} — 11:59 م
+</span>
             </div>
             <div className="flex justify-center items-center gap-2.5">
               {[
